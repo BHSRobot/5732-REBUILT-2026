@@ -6,6 +6,15 @@ package frc.robot.subsystems.Swerve;
 
 import static edu.wpi.first.units.Units.Meter;
 
+import java.io.File;
+import java.io.IOException;
+import java.util.Arrays;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.DoubleSupplier;
+import java.util.function.Supplier;
+
+import org.json.simple.parser.ParseException;
+
 import com.pathplanner.lib.auto.AutoBuilder;
 import com.pathplanner.lib.commands.PathPlannerAuto;
 import com.pathplanner.lib.commands.PathfindingCommand;
@@ -17,6 +26,7 @@ import com.pathplanner.lib.path.PathPlannerPath;
 import com.pathplanner.lib.util.DriveFeedforwards;
 import com.pathplanner.lib.util.swerve.SwerveSetpoint;
 import com.pathplanner.lib.util.swerve.SwerveSetpointGenerator;
+
 import edu.wpi.first.math.controller.SimpleMotorFeedforward;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
@@ -26,8 +36,6 @@ import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
 import edu.wpi.first.math.trajectory.Trajectory;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj.DriverStation;
-import edu.wpi.first.wpilibj.DutyCycleEncoder;
-import frc.robot.RobotContainer;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
@@ -35,18 +43,6 @@ import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import edu.wpi.first.wpilibj2.command.button.RobotModeTriggers;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine.Config;
 import frc.robot.utils.Constants;
-import frc.robot.subsystems.Swerve.Vision.Cameras;
-import java.io.File;
-import java.io.IOException;
-import java.util.Arrays;
-import java.util.Optional;
-import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.DoubleSupplier;
-import java.util.function.Supplier;
-import org.json.simple.parser.ParseException;
-import org.photonvision.targeting.PhotonPipelineResult;
-
-//import org.photonvision.targeting.PhotonPipelineResult;
 import swervelib.SwerveController;
 import swervelib.SwerveDrive;
 import swervelib.SwerveDriveTest;
@@ -57,6 +53,10 @@ import swervelib.parser.SwerveParser;
 import swervelib.telemetry.SwerveDriveTelemetry;
 import swervelib.telemetry.SwerveDriveTelemetry.TelemetryVerbosity;
 
+import com.ctre.phoenix6.configs.CurrentLimitsConfigs;
+import com.ctre.phoenix6.hardware.TalonFX;
+import swervelib.SwerveModule;
+
 public class SwerveSubsystem extends SubsystemBase
 {
 
@@ -64,15 +64,9 @@ public class SwerveSubsystem extends SubsystemBase
    * Swerve drive object.
    */
   private final SwerveDrive swerveDrive;
-  /**
-   * Enable vision odometry updates while driving.
-   */
-  private final boolean     visionDriveTest = false;
-  /**
-   * PhotonVision class to keep an accurate odometry.
-   */
-  private Vision vision;
-
+  
+  
+  
   /**
    * Initialize {@link SwerveDrive} with the directory provided.
    *
@@ -106,12 +100,6 @@ public class SwerveSubsystem extends SubsystemBase
     swerveDrive.setModuleEncoderAutoSynchronize(false,
                                                 1); // Enable if you want to resynchronize your absolute encoders and motor encoders periodically when they are not moving.
     // swerveDrive.pushOffsetsToEncoders(); // Set the absolute encoder to be used over the internal encoder and push the offsets onto it. Throws warning if not possible
-    if (visionDriveTest)
-    {
-      setupPhotonVision();
-      // Stop the odometry thread if we are using vision that way we can synchronize updates better.
-      swerveDrive.stopOdometryThread();
-    }
     setupPathPlanner();
     RobotModeTriggers.autonomous().onTrue(Commands.runOnce(this::zeroGyroWithAlliance));
   }
@@ -134,24 +122,44 @@ public class SwerveSubsystem extends SubsystemBase
     
   }
 
-  /**
-   * Setup the photon vision class.
-   */
-  public void setupPhotonVision()
-  {
-    vision = new Vision(swerveDrive::getPose, swerveDrive.field);
-  }
+  
 
   @Override
   public void periodic()
   {
     // When vision is enabled we must manually update odometry in SwerveDrive
-    if (visionDriveTest)
-    {
-      swerveDrive.updateOdometry();
-      vision.updatePoseEstimation(swerveDrive);
-    }
+    
   }
+
+  public void configureCurrentLimits() {
+    // Create the configuration object
+    CurrentLimitsConfigs configs = new CurrentLimitsConfigs();
+    
+    // SUPPLY LIMIT (Battery/Breaker Protection)
+    // Helps prevent brownouts. 
+    configs.SupplyCurrentLimitEnable = true;
+    configs.SupplyCurrentLimit = 40;       // Limit to 40A
+    configs.SupplyCurrentLowerLimit = 60;   // Allow 60A peak...
+    configs.SupplyCurrentLowerTime = 0.1;     // ...for 0.1 seconds
+
+    // STATOR LIMIT (Motor/Traction Protection)
+    // Limits acceleration torque. Crucial for avoiding wheel slip and motor heat.
+    // For Krakens/Falcons on swerve, 60A-80A is a common "aggressive" range.
+    configs.StatorCurrentLimitEnable = true;
+    configs.StatorCurrentLimit = 80;       
+
+    // Apply to all Drive Motors
+    for (SwerveModule module : swerveDrive.getModules()) {
+        // Retrieve the drive motor and cast to TalonFX
+        // Note: YAGSL's getMotor() returns an Object, so we must cast.
+        Object driveMotorObj = module.getDriveMotor().getMotor();
+        
+        if (driveMotorObj instanceof TalonFX) {
+            TalonFX driveMotor = (TalonFX) driveMotorObj;
+            driveMotor.getConfigurator().apply(configs);
+        }
+    }
+}
 
   @Override
   public void simulationPeriodic()
@@ -235,24 +243,7 @@ public class SwerveSubsystem extends SubsystemBase
    *
    * @return A {@link Command} which will run the alignment.
    */
-  public Command aimAtTarget(Cameras camera)
-  {
-
-    return run(() -> {
-      Optional<PhotonPipelineResult> resultO = camera.getBestResult();
-      if (resultO.isPresent())
-      {
-        var result = resultO.get();
-        if (result.hasTargets())
-        {
-          drive(getTargetSpeeds(0,
-                                0,
-                                Rotation2d.fromDegrees(result.getBestTarget()
-                                                             .getYaw()))); // Not sure if this will work, more math may be required.
-        }
-      }
-    });
-  }
+  
   
 
   /**
