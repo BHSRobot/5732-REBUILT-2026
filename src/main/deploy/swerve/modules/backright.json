@@ -11,7 +11,7 @@
   },
   "angle": {
     "type": "sparkmax_neo550",
-    "id": 13,
+    "id": 12,
     "canbus": "rio"
   },
   "encoder": {

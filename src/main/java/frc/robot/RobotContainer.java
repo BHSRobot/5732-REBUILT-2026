@@ -8,6 +8,7 @@ import java.io.File;
 import java.util.function.BooleanSupplier;
 
 import org.littletonrobotics.junction.networktables.LoggedDashboardChooser;
+import org.w3c.dom.html.HTMLHeadingElement;
 
 import com.pathplanner.lib.auto.AutoBuilder;
 import com.pathplanner.lib.auto.NamedCommands;
@@ -44,7 +45,7 @@ import swervelib.SwerveInputStream;
 public class RobotContainer {
   // field relative val 
   private static boolean fieldRelative = true;
-  // field relative supplier
+  // field relative supplier, its not just the boolean because it needs to 
   private static BooleanSupplier fieldRelativeSupp = () -> fieldRelative;
   // Robot Subsystems
   private final SwerveSubsystem m_driveBase = new SwerveSubsystem(new File(Filesystem.getDeployDirectory(), "swerve/"));
@@ -60,29 +61,7 @@ public class RobotContainer {
 
   //private Autos auto;
 
-  // Handles controller inputs and uses it for angular velocity and angle of robot
-  SwerveInputStream driveAngularVelocity = SwerveInputStream.of(m_driveBase.getSwerveDrive(),
-                                                                () -> m_driverController.getLeftY() * -1,
-                                                                () -> m_driverController.getLeftX() * -1)
-                                                                .withControllerRotationAxis(m_driverController::getRightX)
-                                                                .deadband(OIConstants.kDriveDeadband)
-                                                                .scaleTranslation(0.8)
-                                                                .allianceRelativeControl(true);
-
-  SwerveInputStream driveDirectAngle = driveAngularVelocity.copy().withControllerHeadingAxis(m_driverController::getRightX, 
-                                                                                             m_driverController::getRightY)
-                                                                                             .headingWhile(true);
-
-  // Defines field oriented drive commands for robot 
-
-  
-  
-
-  
-
-  
-
-                                                                                             
+                                                                   
                                                                                     
   public RobotContainer() {
     configureBindings();
@@ -91,8 +70,10 @@ public class RobotContainer {
 
     autoChooser = new LoggedDashboardChooser<>("AutoChooser", AutoBuilder.buildAutoChooser());
     //auto = new Autos();
-    new EventTrigger("Run Eject").onTrue(Commands.print("Eject Ran"));
+    
 
+    // uses the low level drive command as part of yagsl 
+    // controller outputs are flipped and applied to angular and translational speeds
     m_driveBase.setDefaultCommand(
       new RunCommand(
           () -> m_driveBase.drive(
@@ -112,6 +93,11 @@ public class RobotContainer {
 
 
   private void configureBindings() {
+    //                -- Bindings --
+    // POV UP for switching between field and robot relative
+    // A to zero the gyro to your current heading  
+    // 
+    
     // creates a trigger for quick field/robot relative control switching
     new Trigger(m_driverController.povUp()).
                 onTrue(new InstantCommand(() -> fieldRelative = !fieldRelative));      
