@@ -40,6 +40,7 @@ import frc.robot.subsystems.Swerve.SwerveSubsystem;
 import frc.robot.utils.Constants.OIConstants;
 import frc.robot.utils.Constants.DriveConstants;
 import swervelib.SwerveInputStream;
+import swervelib.math.SwerveMath;
 
 
 public class RobotContainer {
@@ -75,17 +76,14 @@ public class RobotContainer {
     // uses the low level drive command as part of yagsl 
     // controller outputs are flipped and applied to angular and translational speeds
     m_driveBase.setDefaultCommand(
-      new RunCommand(
-          () -> m_driveBase.drive(
-              new Translation2d(
-                -m_driverController.getLeftY() * DriveConstants.kMaxSpeedMetersPerSecond, 
-                -m_driverController.getLeftX() * DriveConstants.kMaxSpeedMetersPerSecond
-              ),      
-              -m_driverController.getRightX() * DriveConstants.kMaxAngularSpeed,       
-              fieldRelativeSupp.getAsBoolean()
-          ),
-          m_driveBase
-      ));
+        new RunCommand(
+            () -> m_driveBase.drive(
+                SwerveMath.scaleTranslation(new Translation2d(
+                    m_driverController.getLeftY() * DriveConstants.kMaxSpeedMetersPerSecond*-1.0,
+                    m_driverController.getLeftX() * DriveConstants.kMaxSpeedMetersPerSecond*-1.0), 0.8),
+                    -m_driverController.getRightX() * DriveConstants.kMaxAngularSpeed,
+                fieldRelativeSupp.getAsBoolean()),
+            m_driveBase));
   }
          
 
