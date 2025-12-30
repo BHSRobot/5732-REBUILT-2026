@@ -79,7 +79,7 @@ public class RobotContainer {
           () -> m_driveBase.drive(
               new Translation2d(
                 -m_driverController.getLeftY() * DriveConstants.kMaxSpeedMetersPerSecond, 
-                -m_driverController.getLeftX() * DriveConstants.kMaxSpeedMetersPerSecond
+                - m_driverController.getLeftX() * DriveConstants.kMaxSpeedMetersPerSecond
               ),      
               -m_driverController.getRightX() * DriveConstants.kMaxAngularSpeed,       
               fieldRelativeSupp.getAsBoolean()
