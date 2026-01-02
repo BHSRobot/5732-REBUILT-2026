@@ -5,9 +5,11 @@ import frc.robot.utils.Constants.DriveConstants;
 import frc.robot.utils.Constants.OIConstants;
 import frc.robot.utils.Constants.Vision;
 import frc.robot.utils.LimelightHelpers;
+import swervelib.math.SwerveMath;
 
 import java.io.File;
 
+import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.wpilibj.Filesystem;
@@ -50,9 +52,10 @@ public class VisionAim extends Command {
             angularVelocity *= Constants.DriveConstants.kMaxAngularSpeed;
         }
         m_driveBase.drive(
-                new Translation2d(
-                        -m_driverController.getLeftY() * DriveConstants.kMaxSpeedMetersPerSecond,
-                        -m_driverController.getLeftX() * DriveConstants.kMaxSpeedMetersPerSecond),
+                SwerveMath.cubeTranslation(new Translation2d(
+                    -MathUtil.applyDeadband(m_driverController.getLeftY(),OIConstants.kDriveDeadband),
+                    -MathUtil.applyDeadband(m_driverController.getLeftX(), OIConstants.kDriveDeadband)))
+                    .times(DriveConstants.kMaxSpeedMetersPerSecond),
                 angularVelocity,
                 true);
     }

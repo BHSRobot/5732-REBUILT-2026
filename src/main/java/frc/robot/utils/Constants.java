@@ -104,43 +104,15 @@ public final class Constants {
 
     
 
-    // SPARK MAX CAN IDs
-    public static final int kFrontRightDrivingCanId = 1; //
-    public static final int kRearRightDrivingCanId = 2;
-    public static final int kRearLeftDrivingCanId = 3; //
-    public static final int kFrontLeftDrivingCanId = 4; // 
-
-    
-    
-    
-
-    public static final int kFrontRightTurningCanId = 11; //
-    public static final int kRearRightTurningCanId = 12; //
-    public static final int kFrontLeftTurningCanId = 13; //
-    public static final int kRearLeftTurningCanId = 14;
-
     public static final boolean kGyroReversed = false;
   }
 
-  public static final class ModuleConstants {
-    
-    public static final double kDrivingMinOutput = -1;
-    public static final double kDrivingMaxOutput = 1;
-
-    public static final double kTurningMinOutput = -1;
-    public static final double kTurningMaxOutput = 1;
-
-    public static final IdleMode kDrivingMotorIdleMode = IdleMode.kCoast;
-    public static final IdleMode kTurningMotorIdleMode = IdleMode.kCoast;
-
-    public static final int kDrivingMotorCurrentLimit = 60; // amps
-    public static final int kTurningMotorCurrentLimit = 20; // amps
-  }
 
   public static final class OIConstants {
     public static final int kDriverControllerPort = 0;
     public static final int kOperatorControllerPort = 1;
-    public static final double kDriveDeadband = 0.05;
+    public static final double kDriveDeadband = 0.5;
+
   }
   public static final class Vision {
     public static final String kfrontlime = "limelight-front";

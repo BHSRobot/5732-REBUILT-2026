@@ -45,7 +45,9 @@ import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
 import edu.wpi.first.math.kinematics.SwerveModulePosition;
 import edu.wpi.first.math.trajectory.Trajectory;
 import edu.wpi.first.math.util.Units;
+import edu.wpi.first.util.sendable.Sendable;
 import edu.wpi.first.wpilibj.DriverStation;
+import edu.wpi.first.wpilibj.RobotBase;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.smartdashboard.Field2d;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
@@ -58,6 +60,7 @@ import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine.Config;
 import frc.robot.utils.Constants;
 import frc.robot.utils.Constants.Vision;
 import frc.robot.utils.LimelightHelpers;
+import frc.robot.utils.LimelightHelpers.PoseEstimate;
 import swervelib.SwerveController;
 import swervelib.SwerveDrive;
 import swervelib.SwerveDriveTest;
@@ -84,13 +87,8 @@ public class SwerveSubsystem extends SubsystemBase {
    * Swerve drive object.
    */
   private final SwerveDrive swerveDrive;
-  
-  
-  
-
-  // field object for sim
+  // field object
   private final Field2d m_field = new Field2d();
-  final SwerveDrivePoseEstimator poseEstimator;
 
   /**
    * Initialize {@link SwerveDrive} with the directory provided.
@@ -135,10 +133,6 @@ public class SwerveSubsystem extends SubsystemBase {
     setupPathPlanner();
     RobotModeTriggers.autonomous().onTrue(Commands.runOnce(this::zeroGyroWithAlliance));
     configureCurrentLimits();
-    SmartDashboard.putData("Field", m_field);
-    // Pose estimation setup
-    poseEstimator = new SwerveDrivePoseEstimator(getKinematics(), getHeading(), swerveDrive.getModulePositions(),
-        getPose());
 
   }
 
@@ -153,11 +147,7 @@ public class SwerveSubsystem extends SubsystemBase {
         controllerCfg,
         Constants.DriveConstants.kMaxSpeedMetersPerSecond,
         new Pose2d(new Translation2d(Meter.of(2), Meter.of(0)),
-            Rotation2d.fromDegrees(0)));
-
-    // Pose estimation setup
-    poseEstimator = new SwerveDrivePoseEstimator(getKinematics(), getHeading(), swerveDrive.getModulePositions(),
-        getPose(), VecBuilder.fill(0.1, 0.1, 0.1), VecBuilder.fill(0.9, 0.9, 0.9));
+            Rotation2d.fromDegrees(0)));;
 
     configureCurrentLimits();
 
@@ -167,11 +157,18 @@ public class SwerveSubsystem extends SubsystemBase {
   public void periodic() {
     // --- Essential Telemetry ---
     Logger.recordOutput("Drive/Pose", getPose());
+    
     Logger.recordOutput("Drive/Velocity/RobotRelative", getRobotVelocity());
 
     // --- Swerve Internal State ---
-    // Using a folder structure ("Drive/...") keeps your log tree organized
+    
     Logger.recordOutput("Drive/ModuleStates/Actual", swerveDrive.getStates());
+
+    // --- FIX THIS SOON SO YOU CAN COMPARE SETPOINTS TO MEASURED ANGLES AND
+    // VELOCITY - bushi ----
+
+    // Logger.recordOutput("Drive/ModuleStates/Desired", swerveDrive.getStates());
+
     Logger.recordOutput("Drive/ModulePositions", swerveDrive.getModulePositions());
 
     // --- Sensors ---
@@ -179,20 +176,29 @@ public class SwerveSubsystem extends SubsystemBase {
     Logger.recordOutput("Drive/Gyro/Pitch", swerveDrive.getPitch()); // Useful for "is robot tipped?"
 
     // --- Vision ---
-    // Adding a check to see if we actually see a target
-    boolean hasTarget = LimelightHelpers.getTV("front limelight");
-    Logger.recordOutput("Vision/HasTarget", hasTarget);
-    if (hasTarget) {
-      Logger.recordOutput("Vision/FrontLimelightTY", LimelightHelpers.getTY(Constants.Vision.kfrontlime));
-      Logger.recordOutput("Vision/FrontLimelightTX", LimelightHelpers.getTX(Constants.Vision.kfrontlime));
-      Logger.recordOutput("Vision/BackLimelightTY", LimelightHelpers.getTY(Constants.Vision.kbacklime));
-      Logger.recordOutput("Vision/BackLimelightTX", LimelightHelpers.getTX(Constants.Vision.kbacklime));
+    // Adding a check to see if the robot actually sees a target in the front limelight
+    boolean frntHasTarget = LimelightHelpers.getTV(Vision.kfrontlime);
+    boolean bckHasTarget = LimelightHelpers.getTV(Vision.kbacklime);
+    Logger.recordOutput("Vision/FrontHasTarget", frntHasTarget);
+    if (frntHasTarget) {
+      Logger.recordOutput("Vision/FrontLimelightTY", LimelightHelpers.getTY(Vision.kfrontlime));
+      SmartDashboard.putNumber("Vision/FrontLimelightTY", LimelightHelpers.getTY(Vision.kfrontlime));
+      Logger.recordOutput("Vision/FrontLimelightTX", LimelightHelpers.getTX(Vision.kfrontlime));
+      SmartDashboard.putNumber("Vision/FrontLimelightTX", LimelightHelpers.getTX(Vision.kfrontlime));
     }
+    if (bckHasTarget) {
+      Logger.recordOutput("Vision/BackLimelightTY", LimelightHelpers.getTY(Vision.kbacklime));
+      SmartDashboard.putNumber("Vision/BackLimelightTY", LimelightHelpers.getTY(Vision.kbacklime));
+      Logger.recordOutput("Vision/BackLimelightTX", LimelightHelpers.getTX(Vision.kbacklime));
+      SmartDashboard.putNumber("Vision/BackLimelightTX", LimelightHelpers.getTX(Vision.kbacklime));
+    }
+    
+
     // updates odometry for use in advantagescope
     swerveDrive.updateOdometry();
-    poseEstimator.update(new Rotation2d(swerveDrive.getGyroRotation3d().getX(), swerveDrive.getGyroRotation3d().getY()),
-        swerveDrive.getModulePositions());
+    updateVisionOdometry();
     m_field.setRobotPose(getPose());
+    SmartDashboard.putData("Field", m_field);
 
   }
 
@@ -219,7 +225,7 @@ public class SwerveSubsystem extends SubsystemBase {
     // Apply to Talon Drive Motors
     for (SwerveModule module : swerveDrive.getModules()) {
       // Retrieve the drive motor and cast to TalonFX
-      // Note: YAGSL's getMotor() returns an Object, so we must cast.
+      // YAGSL's getMotor() returns an Object, so it should cast
       Object driveMotorObj = module.getDriveMotor().getMotor();
       Object angleMotorObj = module.getAngleMotor().getMotor();
       if (driveMotorObj instanceof TalonFX driveMotor) {
@@ -237,7 +243,9 @@ public class SwerveSubsystem extends SubsystemBase {
 
   @Override
   public void simulationPeriodic() {
-    periodic();
+    ChassisSpeeds desiredSpeeds = swerveDrive.getFieldVelocity();
+    m_field.setRobotPose(getPose());
+    swerveDrive.updateOdometry();
     swerveDrive.setHeadingCorrection(false);
   }
 
@@ -605,6 +613,62 @@ public class SwerveSubsystem extends SubsystemBase {
    */
   public void resetOdometry(Pose2d initialHolonomicPose) {
     swerveDrive.resetOdometry(initialHolonomicPose);
+    // Front Limelight
+    if (LimelightHelpers.getTV(Constants.Vision.kfrontlime)) {
+      swerveDrive.addVisionMeasurement(
+          LimelightHelpers.getBotPose2d_wpiBlue(Constants.Vision.kfrontlime),
+          Timer.getFPGATimestamp());
+    }
+
+    // Back Limelight
+    if (LimelightHelpers.getTV(Constants.Vision.kbacklime)) {
+      swerveDrive.addVisionMeasurement(
+          LimelightHelpers.getBotPose2d_wpiBlue(Constants.Vision.kbacklime),
+          Timer.getFPGATimestamp());
+    }
+  }
+
+  /*
+   * Updates Vision odometry based off of limelight readings
+   * 
+   */
+
+  public void updateVisionOdometry() {
+    // Calculate common values once
+    double robotYaw = swerveDrive.getOdometryHeading().getDegrees();
+    double angularVel = Units.radiansToDegrees(swerveDrive.getRobotVelocity().omegaRadiansPerSecond);
+
+    // Process each camera using a helper method
+    processLimelight(Vision.kfrontlime, robotYaw, angularVel);
+    processLimelight(Vision.kbacklime, robotYaw, angularVel);
+  }
+
+  /**
+   * Helper method to process a single Limelight's data.
+   */
+  private void processLimelight(String cameraName, double yaw, double velocity) {
+    // Update orientation for MegaTag2
+    LimelightHelpers.SetRobotOrientation(cameraName, yaw, velocity, 0.0, 0.0, 0.0, 0.0);
+
+    // If there is no target, exit early :)
+    if (!LimelightHelpers.getTV(cameraName))
+      return;
+
+    LimelightHelpers.PoseEstimate estimate = LimelightHelpers.getBotPoseEstimate_wpiBlue(cameraName);
+
+    // FILTERS: Max distance 4.5m AND filter high ambiguity on single-tag detections
+    boolean isFar = estimate.avgTagDist > 5;
+    boolean isAmbiguous = estimate.tagCount == 1 && estimate.rawFiducials[0].ambiguity > 0.6;
+
+    if (!isFar && !isAmbiguous) {
+      // trust calculation
+      double stdDev = 0.01 * Math.pow(estimate.avgTagDist, 2);
+
+      swerveDrive.addVisionMeasurement(
+          estimate.pose,
+          estimate.timestampSeconds,
+          VecBuilder.fill(stdDev, stdDev, 9999999));
+    }
   }
 
   /**

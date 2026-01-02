@@ -4,21 +4,20 @@ import com.revrobotics.spark.config.SparkMaxConfig;
 
 import com.revrobotics.spark.config.ClosedLoopConfig.FeedbackSensor;
 
-import frc.robot.utils.Constants.ModuleConstants;
 import com.revrobotics.spark.config.SparkBaseConfig.IdleMode;
 
 public final class Configs {
     
     public static final class ElevatorConfigs {
         public static final SparkMaxConfig elevConfig = new SparkMaxConfig();
+        public static final SparkMaxConfig wristConfig = new SparkMaxConfig();
+
         
         static {
            elevConfig
                 .idleMode(IdleMode.kBrake);
-
+    
             
-            
-
         }
         
     }

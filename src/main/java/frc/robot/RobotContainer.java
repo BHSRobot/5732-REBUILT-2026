@@ -28,8 +28,8 @@ import edu.wpi.first.wpilibj2.command.button.CommandPS5Controller;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
 
-
 import edu.wpi.first.wpilibj2.command.RunCommand;
+import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.geometry.Translation2d;
 import frc.robot.Commands.VisionAim;
 
@@ -42,53 +42,53 @@ import frc.robot.utils.Constants.DriveConstants;
 import swervelib.SwerveInputStream;
 import swervelib.math.SwerveMath;
 
-
 public class RobotContainer {
-  // field relative val 
+  // field relative val
   private static boolean fieldRelative = true;
-  // field relative supplier, its not just the boolean because it needs to 
+  // field relative supplier, its not just the boolean because it needs to
   private static BooleanSupplier fieldRelativeSupp = () -> fieldRelative;
   // Robot Subsystems
   private final SwerveSubsystem m_driveBase = new SwerveSubsystem(new File(Filesystem.getDeployDirectory(), "swerve/"));
-  
+
   // Controllers
-  public static final CommandXboxController m_driverController = new CommandXboxController(OIConstants.kDriverControllerPort);
-  public static final CommandPS5Controller m_altdriverController = new CommandPS5Controller(OIConstants.kDriverControllerPort);
-  public static final CommandXboxController m_opController = new CommandXboxController(OIConstants.kOperatorControllerPort);
-  
-  //private Autos auto;
+  public static final CommandXboxController m_driverController = new CommandXboxController(
+      OIConstants.kDriverControllerPort);
+  public static final CommandPS5Controller m_altdriverController = new CommandPS5Controller(
+      OIConstants.kDriverControllerPort);
+  public static final CommandXboxController m_opController = new CommandXboxController(
+      OIConstants.kOperatorControllerPort);
+
+  // private Autos auto;
 
   private final LoggedDashboardChooser<Command> autoChooser;
 
-  //private Autos auto;
+  // private Autos auto;
 
-                                                                   
-                                                                                    
   public RobotContainer() {
     configureBindings();
     configureNamedCommands();
-    
 
     autoChooser = new LoggedDashboardChooser<>("AutoChooser", AutoBuilder.buildAutoChooser());
-    //auto = new Autos();
-    
+    // auto = new Autos();
 
-    // uses the low level drive command as part of yagsl 
-    // controller outputs are flipped and applied to angular and translational speeds
+    // uses the low level drive command as part of yagsl
+    // controller outputs are flipped and applied to angular and translational
+    // speeds
     m_driveBase.setDefaultCommand(
         new RunCommand(
             () -> m_driveBase.drive(
-                SwerveMath.scaleTranslation(new Translation2d(
-                    m_driverController.getLeftY() * DriveConstants.kMaxSpeedMetersPerSecond*-1.0,
-                    m_driverController.getLeftX() * DriveConstants.kMaxSpeedMetersPerSecond*-1.0), 0.8),
-                    -m_driverController.getRightX() * DriveConstants.kMaxAngularSpeed,
+                /* ====Swerve Math to cube inputs for finer control at low speeds=== */
+                SwerveMath.cubeTranslation(new Translation2d(
+                    -MathUtil.applyDeadband(m_driverController.getLeftY(), OIConstants.kDriveDeadband),
+                    -MathUtil.applyDeadband(m_driverController.getLeftX(), OIConstants.kDriveDeadband)))
+                    .times(DriveConstants.kMaxSpeedMetersPerSecond),
+                // Angular speed
+                Math.pow(-MathUtil.applyDeadband(m_driverController.getRightX(), OIConstants.kDriveDeadband), 3)
+                    * DriveConstants.kMaxAngularSpeed,
+                // Field or Robot relative switch
                 fieldRelativeSupp.getAsBoolean()),
             m_driveBase));
   }
-         
-
-  
-
 
   private void configureBindings() {
 
@@ -99,7 +99,7 @@ public class RobotContainer {
 
     // creates a trigger for quick field/robot relative control switching
     new Trigger(m_driverController.povUp()).onTrue(
-      new InstantCommand(() -> fieldRelative = !fieldRelative));
+        new InstantCommand(() -> fieldRelative = !fieldRelative));
 
     m_driverController.a().onTrue(
         new InstantCommand(() -> m_driveBase.zeroGyro(), m_driveBase).withName("Yaw zeroed"));
@@ -112,54 +112,44 @@ public class RobotContainer {
     //
     //
     m_opController.a().whileTrue(
-      new VisionAim(m_driveBase, m_driverController));
+        new VisionAim(m_driveBase, m_driverController));
 
   }
 
   public void configureNamedCommands() {
-    
-  }
 
-  
+  }
 
   public Command getAutonomousCommand() {
 
-      
-      try{
+    try {
       // Load the path you want to follow using its name in the GUI
       PathPlannerPath path = PathPlannerPath.fromPathFile("New Path");
 
-      // Create a path following command using AutoBuilder. This will also trigger event markers.
+      // Create a path following command using AutoBuilder. This will also trigger
+      // event markers.
       return AutoBuilder.followPath(path);
     } catch (Exception e) {
       DriverStation.reportError("Big oops: " + e.getMessage(), e.getStackTrace());
       return Commands.none();
-  }
-  
+    }
 
-    
-    
-    //return Commands.print("No autonomous command configured");
+    // return Commands.print("No autonomous command configured");
 
   }
-
-
 
   public void setupDriverTab() {
     ShuffleboardTab driverTab = Shuffleboard.getTab("Driver");
     driverTab.addDouble("Time Remaining", () -> {
-        return Timer.getMatchTime();
-      }
-    );
-    driverTab.addString("Event Name",  () -> { 
-        return DriverStation.getEventName();
-      }
-    );
-    driverTab.addString("Alliance Color",  () -> { 
-        return DriverStation.getAlliance().toString();
-      }
-    );
-    
+      return Timer.getMatchTime();
+    });
+    driverTab.addString("Event Name", () -> {
+      return DriverStation.getEventName();
+    });
+    driverTab.addString("Alliance Color", () -> {
+      return DriverStation.getAlliance().toString();
+    });
+
     CameraServer.startAutomaticCapture();
   }
 
@@ -168,4 +158,3 @@ public class RobotContainer {
   }
 
 }
-
