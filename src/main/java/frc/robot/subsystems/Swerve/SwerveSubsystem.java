@@ -58,6 +58,7 @@ import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine.Config;
 import frc.robot.utils.Constants;
 import frc.robot.utils.Constants.Vision;
 import frc.robot.utils.LimelightHelpers;
+import frc.robot.utils.LimelightHelpers.PoseEstimate;
 import swervelib.SwerveController;
 import swervelib.SwerveDrive;
 import swervelib.SwerveDriveTest;
@@ -84,13 +85,6 @@ public class SwerveSubsystem extends SubsystemBase {
    * Swerve drive object.
    */
   private final SwerveDrive swerveDrive;
-  
-  
-  
-
-  // field object for sim
-  private final Field2d m_field = new Field2d();
-  final SwerveDrivePoseEstimator poseEstimator;
 
   /**
    * Initialize {@link SwerveDrive} with the directory provided.
@@ -135,10 +129,6 @@ public class SwerveSubsystem extends SubsystemBase {
     setupPathPlanner();
     RobotModeTriggers.autonomous().onTrue(Commands.runOnce(this::zeroGyroWithAlliance));
     configureCurrentLimits();
-    SmartDashboard.putData("Field", m_field);
-    // Pose estimation setup
-    poseEstimator = new SwerveDrivePoseEstimator(getKinematics(), getHeading(), swerveDrive.getModulePositions(),
-        getPose());
 
   }
 
@@ -154,10 +144,6 @@ public class SwerveSubsystem extends SubsystemBase {
         Constants.DriveConstants.kMaxSpeedMetersPerSecond,
         new Pose2d(new Translation2d(Meter.of(2), Meter.of(0)),
             Rotation2d.fromDegrees(0)));
-
-    // Pose estimation setup
-    poseEstimator = new SwerveDrivePoseEstimator(getKinematics(), getHeading(), swerveDrive.getModulePositions(),
-        getPose(), VecBuilder.fill(0.1, 0.1, 0.1), VecBuilder.fill(0.9, 0.9, 0.9));
 
     configureCurrentLimits();
 
@@ -190,9 +176,8 @@ public class SwerveSubsystem extends SubsystemBase {
     }
     // updates odometry for use in advantagescope
     swerveDrive.updateOdometry();
-    poseEstimator.update(new Rotation2d(swerveDrive.getGyroRotation3d().getX(), swerveDrive.getGyroRotation3d().getY()),
-        swerveDrive.getModulePositions());
-    m_field.setRobotPose(getPose());
+    updateVisionOdometry();
+    
 
   }
 
@@ -605,7 +590,65 @@ public class SwerveSubsystem extends SubsystemBase {
    */
   public void resetOdometry(Pose2d initialHolonomicPose) {
     swerveDrive.resetOdometry(initialHolonomicPose);
+    // Front Limelight
+    if (LimelightHelpers.getTV(Constants.Vision.kfrontlime)) {
+      swerveDrive.addVisionMeasurement(
+          LimelightHelpers.getBotPose2d_wpiBlue(Constants.Vision.kfrontlime),
+          Timer.getFPGATimestamp());
+    }
+
+    // Back Limelight
+    if (LimelightHelpers.getTV(Constants.Vision.kbacklime)) {
+      swerveDrive.addVisionMeasurement(
+          LimelightHelpers.getBotPose2d_wpiBlue(Constants.Vision.kbacklime),
+          Timer.getFPGATimestamp());
+    }
   }
+
+  /*
+   * Updates Vision odometry based off of limelight readings
+   * 
+   */
+
+
+  public void updateVisionOdometry() {
+    // Calculate common values once
+    double robotYaw = swerveDrive.getOdometryHeading().getDegrees();
+    double angularVel = Units.radiansToDegrees(swerveDrive.getRobotVelocity().omegaRadiansPerSecond);
+    
+    // Process each camera using a helper method
+    processLimelight(Vision.kfrontlime, robotYaw, angularVel);
+    processLimelight(Vision.kbacklime, robotYaw, angularVel);
+}
+
+/**
+ * Helper method to process a single Limelight's data.
+ */
+private void processLimelight(String cameraName, double yaw, double velocity) {
+    // Update orientation for MegaTag2
+    LimelightHelpers.SetRobotOrientation(cameraName, yaw, velocity, 0.0, 0.0, 0.0, 0.0);
+
+    // If there is no target, exit early :)
+    if (!LimelightHelpers.getTV(cameraName)) return;
+
+    LimelightHelpers.PoseEstimate estimate = LimelightHelpers.getBotPoseEstimate_wpiBlue(cameraName);
+    
+    // FILTERS: Max distance 4.5m AND filter high ambiguity on single-tag detections
+    boolean isFar = estimate.avgTagDist > 5;
+    boolean isAmbiguous = estimate.tagCount == 1 && estimate.rawFiducials[0].ambiguity > 0.6;
+
+    if (!isFar && !isAmbiguous) {
+        // trust calculation
+        double stdDev = 0.01 * Math.pow(estimate.avgTagDist, 2); 
+        
+        swerveDrive.addVisionMeasurement(
+            estimate.pose,
+            estimate.timestampSeconds,
+            VecBuilder.fill(stdDev, stdDev, 9999999)
+        );
+    }
+}
+
 
   /**
    * Gets the current pose (position and rotation) of the robot, as reported by
