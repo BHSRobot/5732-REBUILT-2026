@@ -87,8 +87,6 @@ public class SwerveSubsystem extends SubsystemBase {
    * Swerve drive object.
    */
   private final SwerveDrive swerveDrive;
-  // field object
-  private final Field2d m_field = new Field2d();
 
   /**
    * Initialize {@link SwerveDrive} with the directory provided.
@@ -147,7 +145,7 @@ public class SwerveSubsystem extends SubsystemBase {
         controllerCfg,
         Constants.DriveConstants.kMaxSpeedMetersPerSecond,
         new Pose2d(new Translation2d(Meter.of(2), Meter.of(0)),
-            Rotation2d.fromDegrees(0)));;
+            Rotation2d.fromDegrees(0)));
 
     configureCurrentLimits();
 
@@ -197,8 +195,7 @@ public class SwerveSubsystem extends SubsystemBase {
     // updates odometry for use in advantagescope
     swerveDrive.updateOdometry();
     updateVisionOdometry();
-    m_field.setRobotPose(getPose());
-    SmartDashboard.putData("Field", m_field);
+    
 
   }
 
@@ -244,7 +241,6 @@ public class SwerveSubsystem extends SubsystemBase {
   @Override
   public void simulationPeriodic() {
     ChassisSpeeds desiredSpeeds = swerveDrive.getFieldVelocity();
-    m_field.setRobotPose(getPose());
     swerveDrive.updateOdometry();
     swerveDrive.setHeadingCorrection(false);
   }
@@ -633,43 +629,45 @@ public class SwerveSubsystem extends SubsystemBase {
    * 
    */
 
+
   public void updateVisionOdometry() {
     // Calculate common values once
     double robotYaw = swerveDrive.getOdometryHeading().getDegrees();
     double angularVel = Units.radiansToDegrees(swerveDrive.getRobotVelocity().omegaRadiansPerSecond);
-
+    
     // Process each camera using a helper method
     processLimelight(Vision.kfrontlime, robotYaw, angularVel);
     processLimelight(Vision.kbacklime, robotYaw, angularVel);
-  }
+}
 
-  /**
-   * Helper method to process a single Limelight's data.
-   */
-  private void processLimelight(String cameraName, double yaw, double velocity) {
+/**
+ * Helper method to process a single Limelight's data.
+ */
+private void processLimelight(String cameraName, double yaw, double velocity) {
     // Update orientation for MegaTag2
     LimelightHelpers.SetRobotOrientation(cameraName, yaw, velocity, 0.0, 0.0, 0.0, 0.0);
 
     // If there is no target, exit early :)
-    if (!LimelightHelpers.getTV(cameraName))
-      return;
+    if (!LimelightHelpers.getTV(cameraName)) return;
 
     LimelightHelpers.PoseEstimate estimate = LimelightHelpers.getBotPoseEstimate_wpiBlue(cameraName);
-
+    
     // FILTERS: Max distance 4.5m AND filter high ambiguity on single-tag detections
     boolean isFar = estimate.avgTagDist > 5;
     boolean isAmbiguous = estimate.tagCount == 1 && estimate.rawFiducials[0].ambiguity > 0.6;
 
     if (!isFar && !isAmbiguous) {
-      // trust calculation
-      double stdDev = 0.01 * Math.pow(estimate.avgTagDist, 2);
-
-      swerveDrive.addVisionMeasurement(
-          estimate.pose,
-          estimate.timestampSeconds,
-          VecBuilder.fill(stdDev, stdDev, 9999999));
+        // trust calculation
+        double stdDev = 0.01 * Math.pow(estimate.avgTagDist, 2); 
+        
+        swerveDrive.addVisionMeasurement(
+            estimate.pose,
+            estimate.timestampSeconds,
+            VecBuilder.fill(stdDev, stdDev, 9999999)
+        );
     }
-  }
+}
+
 
   /**
    * Gets the current pose (position and rotation) of the robot, as reported by
