@@ -4,7 +4,10 @@
 
 package frc.robot.subsystems.Swerve;
 
-import static edu.wpi.first.units.Units.Meter;
+// import static edu.wpi.first.units.Units.Volts;
+// import static edu.wpi.first.units.Units.Radians;
+// import static edu.wpi.first.units.Units.RadiansPerSecond;
+// import static edu.wpi.first.units.Units.Second;
 
 import java.io.File;
 import java.io.IOException;
@@ -31,12 +34,13 @@ import com.revrobotics.spark.SparkMax;
 import com.revrobotics.spark.SparkBase.PersistMode;
 import com.revrobotics.spark.SparkBase.ResetMode;
 import com.revrobotics.spark.config.SparkMaxConfig;
+import com.revrobotics.spark.config.SparkBaseConfig;
 
+import static edu.wpi.first.units.Units.*;
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.VecBuilder;
 import edu.wpi.first.math.controller.SimpleMotorFeedforward;
-import edu.wpi.first.math.estimator.PoseEstimator;
-import edu.wpi.first.math.estimator.SwerveDrivePoseEstimator;
+
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
@@ -45,17 +49,21 @@ import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
 import edu.wpi.first.math.kinematics.SwerveModulePosition;
 import edu.wpi.first.math.trajectory.Trajectory;
 import edu.wpi.first.math.util.Units;
+import edu.wpi.first.wpilibj.DataLogManager;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.Timer;
-import edu.wpi.first.wpilibj.smartdashboard.Field2d;
+import edu.wpi.first.wpilibj.motorcontrol.Talon;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
+import edu.wpi.first.wpilibj.sysid.SysIdRoutineLog;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.RunCommand;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import edu.wpi.first.wpilibj2.command.button.RobotModeTriggers;
+import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine.Config;
 import frc.robot.utils.Constants;
+import frc.robot.utils.Constants.DriveConstants;
 import frc.robot.utils.Constants.Vision;
 import frc.robot.utils.LimelightHelpers;
 import frc.robot.utils.LimelightHelpers.PoseEstimate;
@@ -69,22 +77,84 @@ import swervelib.parser.SwerveParser;
 import swervelib.telemetry.SwerveDriveTelemetry;
 import swervelib.telemetry.SwerveDriveTelemetry.TelemetryVerbosity;
 
+import com.ctre.phoenix.led.ColorFlowAnimation.Direction;
+import com.ctre.phoenix.motorcontrol.NeutralMode;
+import com.ctre.phoenix6.SignalLogger;
 import com.ctre.phoenix6.configs.CurrentLimitsConfigs;
+import com.ctre.phoenix6.configs.MotorOutputConfigs;
+import com.ctre.phoenix6.configs.TalonFXConfiguration;
+import com.ctre.phoenix6.configs.TalonFXConfigurator;
 import com.ctre.phoenix6.hardware.TalonFX;
+import com.ctre.phoenix6.signals.NeutralModeValue;
+
 import swervelib.SwerveModule;
 
-import com.ctre.phoenix6.configs.CurrentLimitsConfigs;
-import com.ctre.phoenix6.hardware.TalonFX;
-import swervelib.SwerveModule;
-
-import frc.robot.Commands.VisionAim;
+import com.revrobotics.RelativeEncoder;
+import com.revrobotics.spark.SparkBase;
+import com.revrobotics.spark.config.SparkBaseConfigAccessor;
+import edu.wpi.first.util.datalog.StringLogEntry;
 
 public class SwerveSubsystem extends SubsystemBase {
 
   /**
    * Swerve drive object.
    */
-  private final SwerveDrive swerveDrive;
+  private final SwerveDrive m_swerveDrive;
+
+  private StringLogEntry m_angleSysIdStateLog;
+  private StringLogEntry m_driveSysIdStateLog;
+
+  /**
+   * Swerve Angular motor SysId Routine
+   */
+  SysIdRoutine.Config angleConfig = new SysIdRoutine.Config(
+      edu.wpi.first.units.Units.Volts.of(1).per(Second), // Ramp: 1V/s
+      edu.wpi.first.units.Units.Volts.of(6), // Step: 6V (Safer for 550s)
+      edu.wpi.first.units.Units.Seconds.of(10), // Timeout
+      (state) -> {
+        m_angleSysIdStateLog.append(state.toString());
+        if (state != SysIdRoutine.State.kNone) {
+          prepareSteerMotorsForSysId();
+        }
+        edu.wpi.first.wpilibj.DataLogManager.log(String.format("sysid-test-state-angle-neo550:%s", state.toString()));
+      });
+
+  public final SysIdRoutine angleSysIdRoutine = new SysIdRoutine(
+      angleConfig,
+      new SysIdRoutine.Mechanism(
+          (measure) -> setAngleMotorVoltage(measure.in(Volts)),
+          (log) -> logAngleMotor(log),
+          this));
+  /**
+   * End of Angle SysId Routine Setup
+   */
+
+  /**
+   * Drive Motor SysId Routine Setup
+   */
+  SysIdRoutine.Config driveConfig = new SysIdRoutine.Config(
+      edu.wpi.first.units.Units.Volts.of(1.5).per(Second), // Ramp: 0.25V/s
+      edu.wpi.first.units.Units.Volts.of(4), // Step: 4V
+      edu.wpi.first.units.Units.Seconds.of(5), // Timeout
+      (state) -> {
+        m_driveSysIdStateLog.append(state.toString());
+        if (state != SysIdRoutine.State.kNone) {
+          prepareDriveMotorsForSysId();
+        }
+        SignalLogger.writeString("sysid-test-state-drive-krakenx60:", state.toString());
+      });
+
+  public final SysIdRoutine driveSysIdRoutine = new SysIdRoutine(
+      driveConfig, new SysIdRoutine.Mechanism(
+          (measure) -> setDriveMotorVoltage(measure.in(Volts)),
+          (log) -> {
+            logDriveMotor(log);
+          },
+          this));
+
+  /**
+   * End of Drive Motor SysId Routine Setup
+   */
 
   /**
    * Initialize {@link SwerveDrive} with the directory provided.
@@ -92,6 +162,8 @@ public class SwerveSubsystem extends SubsystemBase {
    * @param directory Directory of swerve drive config files.
    */
   public SwerveSubsystem(File directory) {
+    m_angleSysIdStateLog = new StringLogEntry(DataLogManager.getLog(), "sysid-test-state-angle-neo550");
+    m_driveSysIdStateLog = new StringLogEntry(DataLogManager.getLog(), "sysid-test-state-drive-krakenx60");
     boolean blueAlliance = false;
     Pose2d startingPose = blueAlliance ? new Pose2d(new Translation2d(Meter.of(1),
         Meter.of(4)),
@@ -103,7 +175,7 @@ public class SwerveSubsystem extends SubsystemBase {
     // objects being created.
     SwerveDriveTelemetry.verbosity = TelemetryVerbosity.HIGH;
     try {
-      swerveDrive = new SwerveParser(directory).createSwerveDrive(Constants.DriveConstants.kMaxSpeedMetersPerSecond,
+      m_swerveDrive = new SwerveParser(directory).createSwerveDrive(Constants.DriveConstants.kMaxSpeedMetersPerSecond,
           startingPose);
       // Alternative method if you don't want to supply the conversion factor via JSON
       // files.
@@ -112,18 +184,18 @@ public class SwerveSubsystem extends SubsystemBase {
     } catch (Exception e) {
       throw new RuntimeException(e);
     }
-    swerveDrive.setHeadingCorrection(false); // Heading correction should only be used while controlling the robot via
+    m_swerveDrive.setHeadingCorrection(false); // Heading correction should only be used while controlling the robot via
                                              // angle.
-    swerveDrive.setCosineCompensator(false);// !SwerveDriveTelemetry.isSimulation); // Disables cosine compensation for
+    m_swerveDrive.setCosineCompensator(false);// !SwerveDriveTelemetry.isSimulation); // Disables cosine compensation for
                                             // simulations since it causes discrepancies not seen in real life.
-    swerveDrive.setAngularVelocityCompensation(true,
+    m_swerveDrive.setAngularVelocityCompensation(true,
         true,
         0.1); // Correct for skew that gets worse as angular velocity increases. Start with a
               // coefficient of 0.1.
-    swerveDrive.setModuleEncoderAutoSynchronize(false,
+    m_swerveDrive.setModuleEncoderAutoSynchronize(false,
         1); // Enable if you want to resynchronize your absolute encoders and motor encoders
             // periodically when they are not moving.
-    // swerveDrive.pushOffsetsToEncoders(); // Set the absolute encoder to be used
+    // m_swerveDrive.pushOffsetsToEncoders(); // Set the absolute encoder to be used
     // over the internal encoder and push the offsets onto it. Throws warning if not
     // possible
     setupPathPlanner();
@@ -139,7 +211,7 @@ public class SwerveSubsystem extends SubsystemBase {
    * @param controllerCfg Swerve Controller.
    */
   public SwerveSubsystem(SwerveDriveConfiguration driveCfg, SwerveControllerConfiguration controllerCfg) {
-    swerveDrive = new SwerveDrive(driveCfg,
+    m_swerveDrive = new SwerveDrive(driveCfg,
         controllerCfg,
         Constants.DriveConstants.kMaxSpeedMetersPerSecond,
         new Pose2d(new Translation2d(Meter.of(2), Meter.of(0)),
@@ -157,12 +229,12 @@ public class SwerveSubsystem extends SubsystemBase {
 
     // --- Swerve Internal State ---
     // Using a folder structure ("Drive/...") keeps your log tree organized
-    Logger.recordOutput("Drive/ModuleStates/Actual", swerveDrive.getStates());
-    Logger.recordOutput("Drive/ModulePositions", swerveDrive.getModulePositions());
+    Logger.recordOutput("Drive/ModuleStates/Actual", m_swerveDrive.getStates());
+    Logger.recordOutput("Drive/ModulePositions", m_swerveDrive.getModulePositions());
 
     // --- Sensors ---
-    Logger.recordOutput("Drive/Gyro/Yaw", swerveDrive.getYaw());
-    Logger.recordOutput("Drive/Gyro/Pitch", swerveDrive.getPitch()); // Useful for "is robot tipped?"
+    Logger.recordOutput("Drive/Gyro/Yaw", m_swerveDrive.getYaw());
+    Logger.recordOutput("Drive/Gyro/Pitch", m_swerveDrive.getPitch()); // Useful for "is robot tipped?"
 
     // --- Vision ---
     // Adding a check to see if we actually see a target
@@ -175,9 +247,8 @@ public class SwerveSubsystem extends SubsystemBase {
       Logger.recordOutput("Vision/BackLimelightTX", LimelightHelpers.getTX(Constants.Vision.kbacklime));
     }
     // updates odometry for use in advantagescope
-    swerveDrive.updateOdometry();
+    m_swerveDrive.updateOdometry();
     updateVisionOdometry();
-    
 
   }
 
@@ -202,9 +273,8 @@ public class SwerveSubsystem extends SubsystemBase {
     talonConfigs.StatorCurrentLimit = 80;
 
     // Apply to Talon Drive Motors
-    for (SwerveModule module : swerveDrive.getModules()) {
+    for (SwerveModule module : m_swerveDrive.getModules()) {
       // Retrieve the drive motor and cast to TalonFX
-      // Note: YAGSL's getMotor() returns an Object, so we must cast.
       Object driveMotorObj = module.getDriveMotor().getMotor();
       Object angleMotorObj = module.getAngleMotor().getMotor();
       if (driveMotorObj instanceof TalonFX driveMotor) {
@@ -220,10 +290,87 @@ public class SwerveSubsystem extends SubsystemBase {
 
   }
 
+  /**
+   * Applies raw voltage to the Angle Motors (NEO 550s).
+   * STRICTLY for SysId. Bypasses all PID and soft limits.
+   * * @param volts Voltage to apply (-12 to +12)
+   */
+  public void setAngleMotorVoltage(double volts) {
+
+    for (SwerveModule module : m_swerveDrive.getModules()) {
+      SparkMax spark = (SparkMax) module.getAngleMotor().getMotor();
+
+      spark.setVoltage(volts);
+    }
+  }
+
+  /**
+   * Logs the specific data from the Front-Left NEO 550 for SysId.
+   * 
+   */
+  public void logAngleMotor(SysIdRoutineLog log) {
+
+    SwerveModule module = m_swerveDrive.getModules()[0];
+    SparkMax spark = (SparkMax) module.getAngleMotor().getMotor();
+    SparkBaseConfigAccessor accessor = spark.configAccessor;
+    RelativeEncoder encoder = spark.getEncoder();
+    double sign = accessor.getInverted() ? -1.0 : 1.0;
+    double gearRatio = 46.42;
+
+    double rawRotations = encoder.getPosition() * sign;
+    double rawRPM = encoder.getVelocity() * sign;
+
+    double positionRadians = (rawRotations / gearRatio) * 2 * Math.PI;
+
+    double velocityRadPerSec = (rawRPM / gearRatio) * (2 * Math.PI) / 60.0;
+
+    log.motor("angle-neo550")
+        .voltage(Volts.of(spark.getAppliedOutput() * spark.getBusVoltage()))
+        .angularPosition(Radians.of(positionRadians))
+        .angularVelocity(RadiansPerSecond.of(velocityRadPerSec));
+  }
+
+  /**
+   * Applies raw voltage to the Angle Motors (NEO 550s).
+   * STRICTLY for SysId. Bypasses all PID and soft limits.
+   * * @param volts Voltage to apply (-12 to +12)
+   */
+  public void setDriveMotorVoltage(double volts) {
+
+    for (SwerveModule module : m_swerveDrive.getModules()) {
+      TalonFX spark = (TalonFX) module.getDriveMotor().getMotor();
+
+      spark.setVoltage(volts);
+    }
+  }
+
+  /**
+   * Logs the specific data from the front-left drive motor
+   * 
+   */
+  public void logDriveMotor(SysIdRoutineLog log) {
+
+    SwerveModule module = m_swerveDrive.getModules()[0];
+    TalonFX talon = (TalonFX) module.getDriveMotor().getMotor();
+    double gearRatio = 4.71;
+
+    double rawRotations = talon.getPosition().getValueAsDouble();
+    double rawRPM = talon.getPosition().getValueAsDouble();
+
+    double positionMeters = (rawRotations / gearRatio) * DriveConstants.kWheelDiameter;
+
+    double velocityMetersPerSec = (rawRPM / gearRatio) * DriveConstants.kWheelDiameter / 60.0;
+
+    log.motor("drive-krakenx60")
+        .voltage(Volts.of(talon.getMotorVoltage().getValueAsDouble() * talon.getSupplyVoltage().getValueAsDouble()))
+        .linearPosition(Meters.of(positionMeters))
+        .linearVelocity(MetersPerSecond.of(velocityMetersPerSec));
+  }
+
   @Override
   public void simulationPeriodic() {
     periodic();
-    swerveDrive.setHeadingCorrection(false);
+    m_swerveDrive.setHeadingCorrection(false);
   }
 
   /**
@@ -247,12 +394,12 @@ public class SwerveSubsystem extends SubsystemBase {
           // ChassisSpeeds supplier. MUST BE ROBOT RELATIVE
           (speedsRobotRelative, moduleFeedForwards) -> {
             if (enableFeedforward) {
-              swerveDrive.drive(
+              m_swerveDrive.drive(
                   speedsRobotRelative,
-                  swerveDrive.kinematics.toSwerveModuleStates(speedsRobotRelative),
+                  m_swerveDrive.kinematics.toSwerveModuleStates(speedsRobotRelative),
                   moduleFeedForwards.linearForces());
             } else {
-              swerveDrive.setChassisSpeeds(speedsRobotRelative);
+              m_swerveDrive.setChassisSpeeds(speedsRobotRelative);
             }
           },
           // Method that will drive the robot given ROBOT RELATIVE ChassisSpeeds. Also
@@ -322,8 +469,8 @@ public class SwerveSubsystem extends SubsystemBase {
   public Command driveToPose(Pose2d pose) {
     // Create the constraints to use while pathfinding
     PathConstraints constraints = new PathConstraints(
-        swerveDrive.getMaximumChassisVelocity(), 4.0,
-        swerveDrive.getMaximumChassisAngularVelocity(), Units.degreesToRadians(720));
+        m_swerveDrive.getMaximumChassisVelocity(), 4.0,
+        m_swerveDrive.getMaximumChassisAngularVelocity(), Units.degreesToRadians(720));
 
     // Since AutoBuilder is configured, we can use it to build pathfinding commands
     return AutoBuilder.pathfindToPose(
@@ -346,11 +493,11 @@ public class SwerveSubsystem extends SubsystemBase {
   private Command driveWithSetpointGenerator(Supplier<ChassisSpeeds> robotRelativeChassisSpeed)
       throws IOException, ParseException {
     SwerveSetpointGenerator setpointGenerator = new SwerveSetpointGenerator(RobotConfig.fromGUISettings(),
-        swerveDrive.getMaximumChassisAngularVelocity());
+        m_swerveDrive.getMaximumChassisAngularVelocity());
     AtomicReference<SwerveSetpoint> prevSetpoint = new AtomicReference<>(
-        new SwerveSetpoint(swerveDrive.getRobotVelocity(),
-            swerveDrive.getStates(),
-            DriveFeedforwards.zeros(swerveDrive.getModules().length)));
+        new SwerveSetpoint(m_swerveDrive.getRobotVelocity(),
+            m_swerveDrive.getStates(),
+            DriveFeedforwards.zeros(m_swerveDrive.getModules().length)));
     AtomicReference<Double> previousTime = new AtomicReference<>();
 
     return startRun(() -> previousTime.set(Timer.getFPGATimestamp()),
@@ -359,7 +506,7 @@ public class SwerveSubsystem extends SubsystemBase {
           SwerveSetpoint newSetpoint = setpointGenerator.generateSetpoint(prevSetpoint.get(),
               robotRelativeChassisSpeed.get(),
               newTime - previousTime.get());
-          swerveDrive.drive(newSetpoint.robotRelativeSpeeds(),
+          m_swerveDrive.drive(newSetpoint.robotRelativeSpeeds(),
               newSetpoint.moduleStates(),
               newSetpoint.feedforwards().linearForces());
           prevSetpoint.set(newSetpoint);
@@ -388,45 +535,19 @@ public class SwerveSubsystem extends SubsystemBase {
   }
 
   /**
-   * Command to characterize the robot drive motors using SysId
-   *
-   * @return SysId Drive Command
-   */
-  public Command sysIdDriveMotorCommand() {
-    return SwerveDriveTest.generateSysIdCommand(
-        SwerveDriveTest.setDriveSysIdRoutine(
-            new Config(),
-            this, swerveDrive, 12, true),
-        3.0, 5.0, 3.0);
-  }
-
-  /**
-   * Command to characterize the robot angle motors using SysId
-   *
-   * @return SysId Angle Command
-   */
-  public Command sysIdAngleMotorCommand() {
-    return SwerveDriveTest.generateSysIdCommand(
-        SwerveDriveTest.setAngleSysIdRoutine(
-            new Config(),
-            this, swerveDrive),
-        3.0, 5.0, 3.0);
-  }
-
-  /**
    * Returns a Command that centers the modules of the SwerveDrive subsystem.
    *
    * @return a Command that centers the modules of the SwerveDrive subsystem
    */
   public Command centerModulesCommand() {
-    return run(() -> Arrays.asList(swerveDrive.getModules())
+    return run(() -> Arrays.asList(m_swerveDrive.getModules())
         .forEach(it -> it.setAngle(0.0)));
   }
 
   public Command defensiveXCommand() {
     return run(() -> {
-      swerveDrive.lockPose();
-      swerveDrive.setChassisSpeeds(new ChassisSpeeds(0, 0, 0));
+      m_swerveDrive.lockPose();
+      m_swerveDrive.setChassisSpeeds(new ChassisSpeeds(0, 0, 0));
     });
   }
 
@@ -442,7 +563,7 @@ public class SwerveSubsystem extends SubsystemBase {
    */
   public Command driveToDistanceCommand(double distanceInMeters, double speedInMetersPerSecond) {
     return run(() -> drive(new ChassisSpeeds(speedInMetersPerSecond, 0, 0)))
-        .until(() -> swerveDrive.getPose().getTranslation().getDistance(new Translation2d(0, 0)) > distanceInMeters);
+        .until(() -> m_swerveDrive.getPose().getTranslation().getDistance(new Translation2d(0, 0)) > distanceInMeters);
   }
 
   /**
@@ -454,7 +575,7 @@ public class SwerveSubsystem extends SubsystemBase {
    * @param kA the acceleration gain of the feedforward
    */
   public void replaceSwerveModuleFeedforward(double kS, double kV, double kA) {
-    swerveDrive.replaceSwerveModuleFeedforward(new SimpleMotorFeedforward(kS, kV, kA));
+    m_swerveDrive.replaceSwerveModuleFeedforward(new SimpleMotorFeedforward(kS, kV, kA));
   }
 
   /**
@@ -473,10 +594,10 @@ public class SwerveSubsystem extends SubsystemBase {
       DoubleSupplier angularRotationX) {
     return run(() -> {
       // Make the robot move
-      swerveDrive.drive(SwerveMath.scaleTranslation(new Translation2d(
-          translationX.getAsDouble() * swerveDrive.getMaximumChassisVelocity(),
-          translationY.getAsDouble() * swerveDrive.getMaximumChassisVelocity()), 0.8),
-          Math.pow(angularRotationX.getAsDouble(), 3) * swerveDrive.getMaximumChassisAngularVelocity(),
+      m_swerveDrive.drive(SwerveMath.scaleTranslation(new Translation2d(
+          translationX.getAsDouble() * m_swerveDrive.getMaximumChassisVelocity(),
+          translationY.getAsDouble() * m_swerveDrive.getMaximumChassisVelocity()), 0.8),
+          Math.pow(angularRotationX.getAsDouble(), 3) * m_swerveDrive.getMaximumChassisAngularVelocity(),
           true,
           false);
     });
@@ -496,18 +617,18 @@ public class SwerveSubsystem extends SubsystemBase {
    */
   public Command driveCommand(DoubleSupplier translationX, DoubleSupplier translationY, DoubleSupplier headingX,
       DoubleSupplier headingY) {
-    swerveDrive.setHeadingCorrection(true); // Normally you would want heading correction for this kind of control.
+    m_swerveDrive.setHeadingCorrection(true); // Normally you would want heading correction for this kind of control.
     return run(() -> {
 
       Translation2d scaledInputs = SwerveMath.scaleTranslation(new Translation2d(translationX.getAsDouble(),
           translationY.getAsDouble()), 0.8);
 
       // Make the robot move
-      driveFieldOriented(swerveDrive.swerveController.getTargetSpeeds(scaledInputs.getX(), scaledInputs.getY(),
+      driveFieldOriented(m_swerveDrive.swerveController.getTargetSpeeds(scaledInputs.getX(), scaledInputs.getY(),
           headingX.getAsDouble(),
           headingY.getAsDouble(),
-          swerveDrive.getOdometryHeading().getRadians(),
-          swerveDrive.getMaximumChassisVelocity()));
+          m_swerveDrive.getOdometryHeading().getRadians(),
+          m_swerveDrive.getMaximumChassisVelocity()));
     });
   }
 
@@ -535,7 +656,7 @@ public class SwerveSubsystem extends SubsystemBase {
    *                      robot-relative.
    */
   public void drive(Translation2d translation, double rotation, boolean fieldRelative) {
-    swerveDrive.drive(translation,
+    m_swerveDrive.drive(translation,
         rotation,
         fieldRelative,
         false); // Open loop is disabled since it shouldn't be used most of the time.
@@ -547,7 +668,7 @@ public class SwerveSubsystem extends SubsystemBase {
    * @param velocity Velocity according to the field.
    */
   public void driveFieldOriented(ChassisSpeeds velocity) {
-    swerveDrive.driveFieldOriented(velocity);
+    m_swerveDrive.driveFieldOriented(velocity);
   }
 
   /**
@@ -557,7 +678,7 @@ public class SwerveSubsystem extends SubsystemBase {
    */
   public Command driveFieldOriented(Supplier<ChassisSpeeds> velocity) {
     return run(() -> {
-      swerveDrive.driveFieldOriented(velocity.get());
+      m_swerveDrive.driveFieldOriented(velocity.get());
     });
   }
 
@@ -567,7 +688,7 @@ public class SwerveSubsystem extends SubsystemBase {
    * @param velocity Robot oriented {@link ChassisSpeeds}
    */
   public void drive(ChassisSpeeds velocity) {
-    swerveDrive.drive(velocity);
+    m_swerveDrive.drive(velocity);
   }
 
   /**
@@ -576,7 +697,7 @@ public class SwerveSubsystem extends SubsystemBase {
    * @return {@link SwerveDriveKinematics} of the swerve drive.
    */
   public SwerveDriveKinematics getKinematics() {
-    return swerveDrive.kinematics;
+    return m_swerveDrive.kinematics;
   }
 
   /**
@@ -589,17 +710,17 @@ public class SwerveSubsystem extends SubsystemBase {
    * @param initialHolonomicPose The pose to set the odometry to
    */
   public void resetOdometry(Pose2d initialHolonomicPose) {
-    swerveDrive.resetOdometry(initialHolonomicPose);
+    m_swerveDrive.resetOdometry(initialHolonomicPose);
     // Front Limelight
     if (LimelightHelpers.getTV(Constants.Vision.kfrontlime)) {
-      swerveDrive.addVisionMeasurement(
+      m_swerveDrive.addVisionMeasurement(
           LimelightHelpers.getBotPose2d_wpiBlue(Constants.Vision.kfrontlime),
           Timer.getFPGATimestamp());
     }
 
     // Back Limelight
     if (LimelightHelpers.getTV(Constants.Vision.kbacklime)) {
-      swerveDrive.addVisionMeasurement(
+      m_swerveDrive.addVisionMeasurement(
           LimelightHelpers.getBotPose2d_wpiBlue(Constants.Vision.kbacklime),
           Timer.getFPGATimestamp());
     }
@@ -610,45 +731,43 @@ public class SwerveSubsystem extends SubsystemBase {
    * 
    */
 
-
   public void updateVisionOdometry() {
     // Calculate common values once
-    double robotYaw = swerveDrive.getOdometryHeading().getDegrees();
-    double angularVel = Units.radiansToDegrees(swerveDrive.getRobotVelocity().omegaRadiansPerSecond);
-    
+    double robotYaw = m_swerveDrive.getOdometryHeading().getDegrees();
+    double angularVel = Units.radiansToDegrees(m_swerveDrive.getRobotVelocity().omegaRadiansPerSecond);
+
     // Process each camera using a helper method
     processLimelight(Vision.kfrontlime, robotYaw, angularVel);
     processLimelight(Vision.kbacklime, robotYaw, angularVel);
-}
+  }
 
-/**
- * Helper method to process a single Limelight's data.
- */
-private void processLimelight(String cameraName, double yaw, double velocity) {
+  /**
+   * Helper method to process a single Limelight's data.
+   */
+  private void processLimelight(String cameraName, double yaw, double velocity) {
     // Update orientation for MegaTag2
     LimelightHelpers.SetRobotOrientation(cameraName, yaw, velocity, 0.0, 0.0, 0.0, 0.0);
 
     // If there is no target, exit early :)
-    if (!LimelightHelpers.getTV(cameraName)) return;
+    if (!LimelightHelpers.getTV(cameraName))
+      return;
 
     LimelightHelpers.PoseEstimate estimate = LimelightHelpers.getBotPoseEstimate_wpiBlue(cameraName);
-    
+
     // FILTERS: Max distance 4.5m AND filter high ambiguity on single-tag detections
     boolean isFar = estimate.avgTagDist > 5;
     boolean isAmbiguous = estimate.tagCount == 1 && estimate.rawFiducials[0].ambiguity > 0.6;
 
     if (!isFar && !isAmbiguous) {
-        // trust calculation
-        double stdDev = 0.01 * Math.pow(estimate.avgTagDist, 2); 
-        
-        swerveDrive.addVisionMeasurement(
-            estimate.pose,
-            estimate.timestampSeconds,
-            VecBuilder.fill(stdDev, stdDev, 9999999)
-        );
-    }
-}
+      // trust calculation
+      double stdDev = 0.01 * Math.pow(estimate.avgTagDist, 2);
 
+      m_swerveDrive.addVisionMeasurement(
+          estimate.pose,
+          estimate.timestampSeconds,
+          VecBuilder.fill(stdDev, stdDev, 9999999));
+    }
+  }
 
   /**
    * Gets the current pose (position and rotation) of the robot, as reported by
@@ -657,7 +776,7 @@ private void processLimelight(String cameraName, double yaw, double velocity) {
    * @return The robot's pose
    */
   public Pose2d getPose() {
-    return swerveDrive.getPose();
+    return m_swerveDrive.getPose();
   }
 
   /**
@@ -666,7 +785,7 @@ private void processLimelight(String cameraName, double yaw, double velocity) {
    * @param chassisSpeeds Chassis Speeds to set.
    */
   public void setChassisSpeeds(ChassisSpeeds chassisSpeeds) {
-    swerveDrive.setChassisSpeeds(chassisSpeeds);
+    m_swerveDrive.setChassisSpeeds(chassisSpeeds);
   }
 
   /**
@@ -675,7 +794,7 @@ private void processLimelight(String cameraName, double yaw, double velocity) {
    * @param trajectory The trajectory to post.
    */
   public void postTrajectory(Trajectory trajectory) {
-    swerveDrive.postTrajectory(trajectory);
+    m_swerveDrive.postTrajectory(trajectory);
   }
 
   /**
@@ -683,7 +802,7 @@ private void processLimelight(String cameraName, double yaw, double velocity) {
    * facing toward 0.
    */
   public void zeroGyro() {
-    swerveDrive.zeroGyro();
+    m_swerveDrive.zeroGyro();
   }
 
   /**
@@ -719,7 +838,7 @@ private void processLimelight(String cameraName, double yaw, double velocity) {
    * @param brake True to set motors to brake mode, false for coast.
    */
   public void setMotorBrake(boolean brake) {
-    swerveDrive.setMotorIdleMode(brake);
+    m_swerveDrive.setMotorIdleMode(brake);
   }
 
   /**
@@ -747,7 +866,7 @@ private void processLimelight(String cameraName, double yaw, double velocity) {
    */
   public ChassisSpeeds getTargetSpeeds(double xInput, double yInput, double headingX, double headingY) {
     Translation2d scaledInputs = SwerveMath.cubeTranslation(new Translation2d(xInput, yInput));
-    return swerveDrive.swerveController.getTargetSpeeds(scaledInputs.getX(),
+    return m_swerveDrive.swerveController.getTargetSpeeds(scaledInputs.getX(),
         scaledInputs.getY(),
         headingX,
         headingY,
@@ -768,7 +887,7 @@ private void processLimelight(String cameraName, double yaw, double velocity) {
   public ChassisSpeeds getTargetSpeeds(double xInput, double yInput, Rotation2d angle) {
     Translation2d scaledInputs = SwerveMath.cubeTranslation(new Translation2d(xInput, yInput));
 
-    return swerveDrive.swerveController.getTargetSpeeds(scaledInputs.getX(),
+    return m_swerveDrive.swerveController.getTargetSpeeds(scaledInputs.getX(),
         scaledInputs.getY(),
         angle.getRadians(),
         getHeading().getRadians(),
@@ -781,7 +900,7 @@ private void processLimelight(String cameraName, double yaw, double velocity) {
    * @return A ChassisSpeeds object of the current field-relative velocity
    */
   public ChassisSpeeds getFieldVelocity() {
-    return swerveDrive.getFieldVelocity();
+    return m_swerveDrive.getFieldVelocity();
   }
 
   /**
@@ -790,7 +909,7 @@ private void processLimelight(String cameraName, double yaw, double velocity) {
    * @return A {@link ChassisSpeeds} object of the current velocity
    */
   public ChassisSpeeds getRobotVelocity() {
-    return swerveDrive.getRobotVelocity();
+    return m_swerveDrive.getRobotVelocity();
   }
 
   /**
@@ -799,7 +918,7 @@ private void processLimelight(String cameraName, double yaw, double velocity) {
    * @return {@link SwerveController} from the {@link SwerveDrive}.
    */
   public SwerveController getSwerveController() {
-    return swerveDrive.swerveController;
+    return m_swerveDrive.swerveController;
   }
 
   /**
@@ -808,14 +927,14 @@ private void processLimelight(String cameraName, double yaw, double velocity) {
    * @return The {@link SwerveDriveConfiguration} fpr the current drive.
    */
   public SwerveDriveConfiguration getSwerveDriveConfiguration() {
-    return swerveDrive.swerveDriveConfiguration;
+    return m_swerveDrive.swerveDriveConfiguration;
   }
 
   /**
    * Lock the swerve drive to prevent it from moving.
    */
   public void lock() {
-    swerveDrive.lockPose();
+    m_swerveDrive.lockPose();
   }
 
   /**
@@ -824,14 +943,14 @@ private void processLimelight(String cameraName, double yaw, double velocity) {
    * @return The heading as a {@link Rotation2d} angle
    */
   public Rotation2d getPitch() {
-    return swerveDrive.getPitch();
+    return m_swerveDrive.getPitch();
   }
 
   /**
    * Add a fake vision reading for testing purposes.
    */
   public void addFakeVisionReading() {
-    swerveDrive.addVisionMeasurement(new Pose2d(3, 3, Rotation2d.fromDegrees(65)), Timer.getFPGATimestamp());
+    m_swerveDrive.addVisionMeasurement(new Pose2d(3, 3, Rotation2d.fromDegrees(65)), Timer.getFPGATimestamp());
   }
 
   /**
@@ -840,6 +959,86 @@ private void processLimelight(String cameraName, double yaw, double velocity) {
    * @return {@link SwerveDrive}
    */
   public SwerveDrive getSwerveDrive() {
-    return swerveDrive;
+    return m_swerveDrive;
+  }
+
+  /**
+   * Command to characterize the robot drive motors using SysId
+   *
+   * @return SysId Drive Command
+   */
+
+  public void prepareSteerMotorsForSysId() {
+    for (SwerveModule module : m_swerveDrive.getModules()) {
+      SparkMax spark = (SparkMax) module.getAngleMotor().getMotor();
+      SparkMaxConfig config = new SparkMaxConfig();
+
+      config
+          .idleMode(SparkBaseConfig.IdleMode.kCoast)
+          .smartCurrentLimit(30);
+
+      config.encoder
+          .positionConversionFactor(1.0)
+          .velocityConversionFactor(1.0);
+      config.softLimit
+          .forwardSoftLimitEnabled(false)
+          .reverseSoftLimitEnabled(false);
+
+      spark.configure(config, SparkBase.ResetMode.kNoResetSafeParameters, SparkBase.PersistMode.kPersistParameters);
+
+    }
+  }
+
+  /**
+   * Commands to characterize the robot angle motors using SysId
+   * 
+   * @param direction
+   * @return Angle motor Dynamic SysId Command
+   */
+  public Command sysIdAngleDynam(SysIdRoutine.Direction direction) {
+    return angleSysIdRoutine.dynamic(direction);
+  }
+
+  /**
+   * 
+   * @param direction
+   * @return Angle motor Quasi SysId Command
+   */
+  public Command sysIdAngleQuasi(SysIdRoutine.Direction direction) {
+    return angleSysIdRoutine.quasistatic(direction);
+  }
+  /**
+   * Wipes and prepares the drive motors for SysId testing
+   */
+  private void prepareDriveMotorsForSysId() {
+    for (SwerveModule module : m_swerveDrive.getModules()) {
+      TalonFX talon = (TalonFX) module.getDriveMotor().getMotor();
+      TalonFXConfiguration config = new TalonFXConfiguration();
+      config.MotorOutput.NeutralMode = NeutralModeValue.Coast;
+
+
+      
+      talon.getConfigurator().apply(config);
+    }
+  }
+
+  /**
+   * Command to characterize the robot drive motors using SysId
+   * 
+   * @param direction
+   * @return SysId Dynamic Drive Command
+   */
+  public Command sysIdDriveDynam(SysIdRoutine.Direction direction) {
+    return Commands.none();
+  }
+
+  /**
+   * Command to characterize the robot drive motors using SysId
+   * 
+   * @param direction
+   * @return SysId Quasi Drive Command
+   */
+  public Command sysIdDriveQuasi(SysIdRoutine.Direction direction) {
+    return Commands.none();
   }
 }

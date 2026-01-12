@@ -27,10 +27,11 @@ import edu.wpi.first.wpilibj2.command.InstantCommand;
 import edu.wpi.first.wpilibj2.command.button.CommandPS5Controller;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
-
+import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine.Direction;
 import edu.wpi.first.wpilibj2.command.RunCommand;
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.geometry.Translation2d;
+import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine.Direction;
 import frc.robot.Commands.VisionAim;
 
 //import frc.robot.Commands.Autos;
@@ -112,8 +113,35 @@ public class RobotContainer {
     // HOLD A to aim the limelight at your target
     //
     //
+    // m_opController.a().whileTrue(
+    //   new VisionAim(m_driveBase, m_driverController));
+
+    m_opController.y().whileTrue(
+      m_driveBase.sysIdAngleQuasi(Direction.kForward)
+    );
     m_opController.a().whileTrue(
-        new VisionAim(m_driveBase, m_driverController));
+      m_driveBase.sysIdAngleQuasi(Direction.kReverse)
+    );
+    m_opController.b().whileTrue(
+      m_driveBase.sysIdAngleDynam(Direction.kForward)
+    );
+    m_opController.x().whileTrue(
+      m_driveBase.sysIdAngleDynam(Direction.kReverse)
+    );
+
+    m_opController.povDown().whileTrue(
+      m_driveBase.sysIdDriveQuasi(Direction.kReverse)
+    );
+    m_opController.povUp().whileTrue(
+      m_driveBase.sysIdDriveQuasi(Direction.kForward)
+    );
+    m_opController.povLeft().whileTrue(
+      m_driveBase.sysIdDriveDynam(Direction.kReverse)
+    );
+    m_opController.povRight().whileTrue(
+      m_driveBase.sysIdDriveDynam(Direction.kForward)
+    );
+
 
   }
 

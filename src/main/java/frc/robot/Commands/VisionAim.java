@@ -22,9 +22,9 @@ public class VisionAim extends Command {
             OIConstants.kDriverControllerPort);
     private static final double kP = Constants.Vision.kPVision;
 
-    private double angularVelocity;
-    private double targetError;
-    private final double minTorque = 1.0;
+    private double m_angularVelocity;
+    private double m_targetError;
+    private final double m_minTorque = 1.0;
 
     public VisionAim(SwerveSubsystem driveBase, CommandXboxController controller) {
         this.m_driveBase = driveBase;
@@ -41,19 +41,19 @@ public class VisionAim extends Command {
 
     @Override
     public void execute() {
-        angularVelocity = 0;
-        targetError = 0;
+        m_angularVelocity = 0;
+        m_targetError = 0;
         if (LimelightHelpers.getTV(Vision.kfrontlime)) {
             // TX flipped for more intuitive use
-            targetError = -LimelightHelpers.getTX(Vision.kfrontlime);
-            angularVelocity = targetError * kP;
-            angularVelocity *= Constants.DriveConstants.kMaxAngularSpeed;
+            m_targetError = -LimelightHelpers.getTX(Vision.kfrontlime);
+            m_angularVelocity = m_targetError * kP;
+            m_angularVelocity *= Constants.DriveConstants.kMaxAngularSpeed;
         }
         m_driveBase.drive(
                 new Translation2d(
                         -m_driverController.getLeftY() * DriveConstants.kMaxSpeedMetersPerSecond,
                         -m_driverController.getLeftX() * DriveConstants.kMaxSpeedMetersPerSecond),
-                angularVelocity,
+                m_angularVelocity,
                 true);
     }
 
@@ -66,8 +66,8 @@ public class VisionAim extends Command {
     public boolean isFinished() {
         if (LimelightHelpers.getTV(Vision.kfrontlime)) {
             // TX flipped for more intuitive use
-            targetError = -LimelightHelpers.getTX(Vision.kfrontlime);
-            return Math.abs(targetError) < 1.0;
+            m_targetError = -LimelightHelpers.getTX(Vision.kfrontlime);
+            return Math.abs(m_targetError) < 1.0;
         }
         return false;
     }
