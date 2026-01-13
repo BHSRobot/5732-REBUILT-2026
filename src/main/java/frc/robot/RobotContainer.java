@@ -30,6 +30,7 @@ import edu.wpi.first.wpilibj2.command.button.Trigger;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine.Direction;
 import edu.wpi.first.wpilibj2.command.RunCommand;
 import edu.wpi.first.math.MathUtil;
+import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine.Direction;
 import frc.robot.Commands.VisionAim;
@@ -50,6 +51,7 @@ public class RobotContainer {
   private static BooleanSupplier fieldRelativeSupp = () -> fieldRelative;
   // Robot Subsystems
   private final SwerveSubsystem m_driveBase = new SwerveSubsystem(new File(Filesystem.getDeployDirectory(), "swerve/"));
+
 
   // Controllers
   public static final CommandXboxController m_driverController = new CommandXboxController(
@@ -80,13 +82,12 @@ public class RobotContainer {
             () -> m_driveBase.drive(
                 /* ====Swerve Math to cube inputs for finer control at low speeds=== */
                 SwerveMath.cubeTranslation(new Translation2d(
-                    -MathUtil.applyDeadband(m_driverController.getLeftY() * DriveConstants.kMaxSpeedMetersPerSecond,
-                        OIConstants.kDriveDeadband),
-                    -MathUtil.applyDeadband(m_driverController.getLeftX() * DriveConstants.kMaxSpeedMetersPerSecond,
-                        OIConstants.kDriveDeadband))),
+                    -MathUtil.applyDeadband(m_driverController.getLeftY(), OIConstants.kDriveDeadband),
+                    -MathUtil.applyDeadband(m_driverController.getLeftX(), OIConstants.kDriveDeadband)))
+                    .times(DriveConstants.kMaxSpeedMetersPerSecond),
                 // Angular speed
-                -MathUtil.applyDeadband(m_driverController.getRightX() * DriveConstants.kMaxAngularSpeed,
-                    OIConstants.kDriveDeadband),
+                Math.pow(-MathUtil.applyDeadband(m_driverController.getRightX(), OIConstants.kDriveDeadband), 3)
+                    * DriveConstants.kMaxAngularSpeed,
                 // Field or Robot relative switch
                 fieldRelativeSupp.getAsBoolean()),
             m_driveBase));
@@ -146,6 +147,7 @@ public class RobotContainer {
   }
 
   public void configureNamedCommands() {
+
 
   }
 

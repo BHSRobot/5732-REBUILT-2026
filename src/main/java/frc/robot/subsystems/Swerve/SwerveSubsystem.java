@@ -50,7 +50,9 @@ import edu.wpi.first.math.kinematics.SwerveModulePosition;
 import edu.wpi.first.math.trajectory.Trajectory;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj.DataLogManager;
+import edu.wpi.first.util.sendable.Sendable;
 import edu.wpi.first.wpilibj.DriverStation;
+import edu.wpi.first.wpilibj.RobotBase;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.motorcontrol.Talon;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
@@ -225,11 +227,18 @@ public class SwerveSubsystem extends SubsystemBase {
   public void periodic() {
     // --- Essential Telemetry ---
     Logger.recordOutput("Drive/Pose", getPose());
+    
     Logger.recordOutput("Drive/Velocity/RobotRelative", getRobotVelocity());
 
     // --- Swerve Internal State ---
-    // Using a folder structure ("Drive/...") keeps your log tree organized
+    
     Logger.recordOutput("Drive/ModuleStates/Actual", m_swerveDrive.getStates());
+
+    // --- FIX THIS SOON SO YOU CAN COMPARE SETPOINTS TO MEASURED ANGLES AND
+    // VELOCITY - bushi ----
+
+    // Logger.recordOutput("Drive/ModuleStates/Desired", swerveDrive.getStates());
+
     Logger.recordOutput("Drive/ModulePositions", m_swerveDrive.getModulePositions());
 
     // --- Sensors ---
@@ -237,15 +246,24 @@ public class SwerveSubsystem extends SubsystemBase {
     Logger.recordOutput("Drive/Gyro/Pitch", m_swerveDrive.getPitch()); // Useful for "is robot tipped?"
 
     // --- Vision ---
-    // Adding a check to see if we actually see a target
-    boolean hasTarget = LimelightHelpers.getTV("front limelight");
-    Logger.recordOutput("Vision/HasTarget", hasTarget);
-    if (hasTarget) {
-      Logger.recordOutput("Vision/FrontLimelightTY", LimelightHelpers.getTY(Constants.Vision.kfrontlime));
-      Logger.recordOutput("Vision/FrontLimelightTX", LimelightHelpers.getTX(Constants.Vision.kfrontlime));
-      Logger.recordOutput("Vision/BackLimelightTY", LimelightHelpers.getTY(Constants.Vision.kbacklime));
-      Logger.recordOutput("Vision/BackLimelightTX", LimelightHelpers.getTX(Constants.Vision.kbacklime));
+    // Adding a check to see if the robot actually sees a target in the front limelight
+    boolean frntHasTarget = LimelightHelpers.getTV(Vision.kfrontlime);
+    boolean bckHasTarget = LimelightHelpers.getTV(Vision.kbacklime);
+    Logger.recordOutput("Vision/FrontHasTarget", frntHasTarget);
+    if (frntHasTarget) {
+      Logger.recordOutput("Vision/FrontLimelightTY", LimelightHelpers.getTY(Vision.kfrontlime));
+      SmartDashboard.putNumber("Vision/FrontLimelightTY", LimelightHelpers.getTY(Vision.kfrontlime));
+      Logger.recordOutput("Vision/FrontLimelightTX", LimelightHelpers.getTX(Vision.kfrontlime));
+      SmartDashboard.putNumber("Vision/FrontLimelightTX", LimelightHelpers.getTX(Vision.kfrontlime));
     }
+    if (bckHasTarget) {
+      Logger.recordOutput("Vision/BackLimelightTY", LimelightHelpers.getTY(Vision.kbacklime));
+      SmartDashboard.putNumber("Vision/BackLimelightTY", LimelightHelpers.getTY(Vision.kbacklime));
+      Logger.recordOutput("Vision/BackLimelightTX", LimelightHelpers.getTX(Vision.kbacklime));
+      SmartDashboard.putNumber("Vision/BackLimelightTX", LimelightHelpers.getTX(Vision.kbacklime));
+    }
+    
+
     // updates odometry for use in advantagescope
     m_swerveDrive.updateOdometry();
     updateVisionOdometry();
@@ -275,6 +293,7 @@ public class SwerveSubsystem extends SubsystemBase {
     // Apply to Talon Drive Motors
     for (SwerveModule module : m_swerveDrive.getModules()) {
       // Retrieve the drive motor and cast to TalonFX
+      // YAGSL's getMotor() returns an Object, so it should cast
       Object driveMotorObj = module.getDriveMotor().getMotor();
       Object angleMotorObj = module.getAngleMotor().getMotor();
       if (driveMotorObj instanceof TalonFX driveMotor) {
@@ -369,7 +388,8 @@ public class SwerveSubsystem extends SubsystemBase {
 
   @Override
   public void simulationPeriodic() {
-    periodic();
+    ChassisSpeeds desiredSpeeds = m_swerveDrive.getFieldVelocity();
+    m_swerveDrive.updateOdometry();
     m_swerveDrive.setHeadingCorrection(false);
   }
 
