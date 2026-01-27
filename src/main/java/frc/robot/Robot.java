@@ -4,11 +4,17 @@
 
 package frc.robot;
 
+import edu.wpi.first.math.geometry.Pose3d;
+import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.DriverStation.MatchType;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import frc.robot.utils.Constants;
+
+import swervelib.simulation.ironmaple.simulation.SimulatedArena;
+import swervelib.simulation.ironmaple.simulation.drivesims.SwerveDriveSimulation;
+
 import org.littletonrobotics.junction.LogFileUtil;
 import org.littletonrobotics.junction.LoggedRobot;
 import org.littletonrobotics.junction.Logger;
@@ -18,74 +24,86 @@ import org.littletonrobotics.junction.wpilog.WPILOGWriter;
 import frc.robot.subsystems.Swerve.SwerveSubsystem;
 
 import com.pathplanner.lib.commands.FollowPathCommand;
-
+import frc.robot.sim.RebuiltArena2026;
 
 /**
- * The VM is configured to automatically run this class, and to call the functions corresponding to
- * each mode, as described in the TimedRobot documentation. If you change the name of this class or
- * the package after creating this project, you must also update the build.gradle file in the
+ * The VM is configured to automatically run this class, and to call the
+ * functions corresponding to
+ * each mode, as described in the TimedRobot documentation. If you change the
+ * name of this class or
+ * the package after creating this project, you must also update the
+ * build.gradle file in the
  * project.
  */
 public class Robot extends LoggedRobot {
   private Command m_autonomousCommand;
 
   private RobotContainer m_robotContainer;
+  private RebuiltArena2026 m_arena = new RebuiltArena2026();
   
+
   /**
-   * This function is run when the robot is first started up and should be used for any
+   * This function is run when the robot is first started up and should be used
+   * for any
    * initialization code.
    */
   @Override
   public void robotInit() {
-      FollowPathCommand.warmupCommand().schedule();
-     // Set up data receivers & replay source
-     switch (Constants.currentMode) {
-       case REAL:
-         // Running on a real robot, log to a USB stick ("/U/logs")
-         Logger.addDataReceiver(new WPILOGWriter());
-         Logger.addDataReceiver(new NT4Publisher());
-         break;
- 
-       case SIM:
-         // Running a physics simulator, log to NT
-         Logger.addDataReceiver(new NT4Publisher());
-         break;
- 
-       case REPLAY:
-         // Replaying a log, set up replay source
-         setUseTiming(false); // Run as fast as possible
-         String logPath = LogFileUtil.findReplayLog();
-         Logger.setReplaySource(new WPILOGReader(logPath));
-         Logger.addDataReceiver(new WPILOGWriter(LogFileUtil.addPathSuffix(logPath, "_sim")));
-         break;
-     }
-  
-    //Logger.disableDeterministicTimestamps(); // See "Deterministic Timestamps" in the "Understanding Data Flow" page
-    Logger.start(); // Start logging! No more data receivers, replay sources, or metadata values may be added.
-    // Instantiate our RobotContainer.  This will perform all our button bindings, and put our
+    FollowPathCommand.warmupCommand().schedule();
+    // Set up data receivers & replay source
+    switch (Constants.currentMode) {
+      case REAL:
+        // Running on a real robot, log to a USB stick ("/U/logs")
+        Logger.addDataReceiver(new WPILOGWriter());
+        Logger.addDataReceiver(new NT4Publisher());
+        break;
+
+      case SIM:
+        // Running a physics simulator, log to NT
+        Logger.addDataReceiver(new NT4Publisher());
+        break;
+
+      case REPLAY:
+        // Replaying a log, set up replay source
+        setUseTiming(false); // Run as fast as possible
+        String logPath = LogFileUtil.findReplayLog();
+        Logger.setReplaySource(new WPILOGReader(logPath));
+        Logger.addDataReceiver(new WPILOGWriter(LogFileUtil.addPathSuffix(logPath, "_sim")));
+        break;
+    }
+
+    // Logger.disableDeterministicTimestamps(); // See "Deterministic Timestamps" in
+    // the "Understanding Data Flow" page
+    Logger.start(); // Start logging! No more data receivers, replay sources, or metadata values may
+                    // be added.
+    // Instantiate our RobotContainer. This will perform all our button bindings,
+    // and put our
     // autonomous chooser on the dashboard.
     m_robotContainer = new RobotContainer();
     DriverStation.silenceJoystickConnectionWarning(true);
   }
 
   /**
-   * This function is called every 20 ms, no matter the mode. Use this for items like diagnostics
+   * This function is called every 20 ms, no matter the mode. Use this for items
+   * like diagnostics
    * that you want ran during disabled, autonomous, teleoperated and test.
    *
-   * <p>This runs after the mode specific periodic functions, but before LiveWindow and
+   * <p>
+   * This runs after the mode specific periodic functions, but before LiveWindow
+   * and
    * SmartDashboard integrated updating.
    */
   @Override
   public void robotPeriodic() {
-    
-    
-    // Runs the Scheduler.  This is responsible for polling buttons, adding newly-scheduled
-    // commands, running already-scheduled commands, removing finished or interrupted commands,
-    // and running subsystem periodic() methods.  This must be called from the robot's periodic
+
+    // Runs the Scheduler. This is responsible for polling buttons, adding
+    // newly-scheduled
+    // commands, running already-scheduled commands, removing finished or
+    // interrupted commands,
+    // and running subsystem periodic() methods. This must be called from the
+    // robot's periodic
     // block in order for anything in the Command-based framework to work.
-    CommandScheduler.getInstance().run(); 
-    //m_frontRight.m_drivingSpark.setInverted(true);
-    //m_rearLeft.m_drivingSpark.setInverted(true);
+    CommandScheduler.getInstance().run();
   }
 
   /** This function is called once each time the robot enters Disabled mode. */
@@ -95,9 +113,13 @@ public class Robot extends LoggedRobot {
   }
 
   @Override
-  public void disabledPeriodic() {}
+  public void disabledPeriodic() {
+  }
 
-  /** This autonomous runs the autonomous command selected by your {@link RobotContainer} class. */
+  /**
+   * This autonomous runs the autonomous command selected by your
+   * {@link RobotContainer} class.
+   */
   @Override
   public void autonomousInit() {
     m_autonomousCommand = m_robotContainer.getAutonomousCommand();
@@ -117,7 +139,8 @@ public class Robot extends LoggedRobot {
 
   /** This function is called periodically during autonomous. */
   @Override
-  public void autonomousPeriodic() {}
+  public void autonomousPeriodic() {
+  }
 
   @Override
   public void teleopInit() {
@@ -128,16 +151,16 @@ public class Robot extends LoggedRobot {
     if (m_autonomousCommand != null) {
       m_autonomousCommand.cancel();
     }
-    
+
   }
 
   /** This function is called periodically during operator control. */
-  
 
-  
   @Override
-  public void teleopPeriodic() {}
-  // bushi was here 
+  public void teleopPeriodic() {
+  }
+
+  // bushi was here
   @Override
   public void testInit() {
     // Cancels all running commands at the start of test mode.
@@ -146,5 +169,34 @@ public class Robot extends LoggedRobot {
 
   /** This function is called periodically during test mode. */
   @Override
-  public void testPeriodic() {}
+  public void testPeriodic() {
+  }
+
+  
+
+  @Override
+  public void simulationInit() {
+    
+    
+    m_arena.clearGamePieces();
+    m_arena.placeGamePiecesOnField();
+
+  }
+
+  @Override
+  public void simulationPeriodic() {
+    m_arena.simulationPeriodic();
+
+    Pose3d[] fuelsPoses = m_arena
+        .getGamePiecesArrayByType("Fuel");
+    // Publish to telemetry using AdvantageKit
+    if (fuelsPoses.length > 0) {
+      // Only log every 2nd or 3rd tick to save CPU
+      if (edu.wpi.first.wpilibj.Timer.getFPGATimestamp() % 0.04 < 0.02) {
+        Logger.recordOutput("FieldSimulation/FuelPositions", fuelsPoses);
+      }
+    }
+    Logger.recordOutput("FieldSimulation/FuelCount", fuelsPoses.length);
+
+  }
 }

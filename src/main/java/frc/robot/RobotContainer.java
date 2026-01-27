@@ -31,19 +31,24 @@ import edu.wpi.first.wpilibj2.command.button.Trigger;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine.Direction;
 import edu.wpi.first.wpilibj2.command.RunCommand;
 import edu.wpi.first.math.MathUtil;
-import edu.wpi.first.math.MathUtil;
+
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
-import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine.Direction;
+
 import frc.robot.Commands.ChassisVisionAim;
+import frc.robot.subsystems.Swerve.SwerveConstants;
 
 //import frc.robot.Commands.Autos;
 //import frc.robot.commands.ScoringPositions;
 
 import frc.robot.subsystems.Swerve.SwerveSubsystem;
 import frc.robot.utils.Constants.OIConstants;
-import frc.robot.utils.Constants.DriveConstants;
-import swervelib.SwerveInputStream;
+import frc.robot.subsystems.Intake.Intake;
+import frc.robot.subsystems.Intake.IntakeIOReal;
+import frc.robot.subsystems.Intake.IntakeIOSim;
+import frc.robot.Robot;
+
+
 import swervelib.math.SwerveMath;
 
 public class RobotContainer {
@@ -52,7 +57,10 @@ public class RobotContainer {
   // field relative supplier, its not just the boolean because it needs to update with the drive command
   private static BooleanSupplier fieldRelativeSupp = () -> fieldRelative;
   // Robot Subsystems
-  private final SwerveSubsystem m_driveBase = new SwerveSubsystem(new File(Filesystem.getDeployDirectory(), "swerve/"));
+  //public for now because idk how else sysidroutines will use it
+  public final SwerveSubsystem m_driveBase;
+  private final Intake m_intake;
+  
 
 
   // Controllers
@@ -70,28 +78,31 @@ public class RobotContainer {
   // private Autos auto;
 
   public RobotContainer() {
+    m_driveBase = new SwerveSubsystem(new File(Filesystem.getDeployDirectory(), "swerve/"));
+    autoChooser = new LoggedDashboardChooser<>("AutoChooser", AutoBuilder.buildAutoChooser());
+    if (RobotBase.isSimulation()) {
+      m_intake = new Intake(new IntakeIOSim(m_driveBase.getSimDrive()));
+      
+    }
+    else {
+      m_intake = new Intake(new IntakeIOReal());
+    }
+
     configureBindings();
     configureNamedCommands();
 
-    autoChooser = new LoggedDashboardChooser<>("AutoChooser", AutoBuilder.buildAutoChooser());
     // auto = new Autos();
 
     // uses the low level drive command as part of yagsl
     // controller outputs are flipped and applied to angular and translational
     // speeds
-    
-
-
-
-
-    
     m_driveBase.setDefaultCommand(
         new RunCommand(
             () -> {
               Translation2d translation = SwerveMath.cubeTranslation(new Translation2d(
                   -MathUtil.applyDeadband(m_driverController.getLeftY(), OIConstants.kDriveDeadband),
                   -MathUtil.applyDeadband(m_driverController.getLeftX(), OIConstants.kDriveDeadband)))
-                  .times(DriveConstants.kMaxSpeedMetersPerSecond);
+                  .times(SwerveConstants.kMaxSpeedMetersPerSecond);
 
               
               boolean isFieldRelative = fieldRelativeSupp.getAsBoolean();
@@ -104,20 +115,17 @@ public class RobotContainer {
               m_driveBase.drive(
                   translation,
                   -Math.pow(MathUtil.applyDeadband(m_driverController.getRightX(), OIConstants.kDriveDeadband), 3)
-                      * DriveConstants.kMaxAngularSpeed,
+                      * SwerveConstants.kMaxAngularSpeed,
                   isFieldRelative);
             },
             m_driveBase));
-      
-    
-    
     
     
   }
 
   private void configureBindings() {
 
-    // ====DRIVER BINDS====
+    // ==== DRIVER BINDS ====
     // PRESS POV UP to toggle between field and robot relative
     // PRESS A to zero the gyro to your current heading
     // HOLD X to lock robot in defensive stance
@@ -132,40 +140,52 @@ public class RobotContainer {
     m_driverController.x().whileTrue(
         new RunCommand(() -> m_driveBase.defensiveXCommand(), m_driveBase).withName("Defense Position"));
 
-    // ====OPERATOR BINDS====
+    // m_driverController.rightTrigger().whileTrue(
+    //   m_intake.intakeCommand()
+    // );
+    // m_driverController.leftTrigger().whileTrue(
+    //   m_intake.ejectCommand()
+    // );
+
+    // ==== OPERATOR BINDS ====
     // HOLD A to aim the limelight at your target
     //
     //
     // m_opController.a().whileTrue(
     //   new VisionAim(m_driveBase, m_driverController));
 
-    m_opController.y().whileTrue(
-      m_driveBase.sysIdAngleQuasi(Direction.kForward)
-    );
-    m_opController.a().whileTrue(
-      m_driveBase.sysIdAngleQuasi(Direction.kReverse)
-    );
-    m_opController.b().whileTrue(
-      m_driveBase.sysIdAngleDynam(Direction.kForward)
-    );
-    m_opController.x().whileTrue(
-      m_driveBase.sysIdAngleDynam(Direction.kReverse)
-    );
+    
+    // ==== SYS ID BINDS (comment these out when not in use) ====
 
-    m_opController.povDown().whileTrue(
-      m_driveBase.sysIdDriveQuasi(Direction.kReverse)
-    );
-    m_opController.povUp().whileTrue(
-      m_driveBase.sysIdDriveQuasi(Direction.kForward)
-    );
-    m_opController.povLeft().whileTrue(
-      m_driveBase.sysIdDriveDynam(Direction.kReverse)
-    );
-    m_opController.povRight().whileTrue(
-      m_driveBase.sysIdDriveDynam(Direction.kForward)
-    );
+    // m_opController.y().whileTrue(
+    //   SysIDRoutines.sysIdAngleQuasi(Direction.kForward)
+    // );
+    // m_opController.a().whileTrue(
+    //   SysIDRoutines.sysIdAngleQuasi(Direction.kReverse)
+    // );
+    // m_opController.b().whileTrue(
+    //   SysIDRoutines.sysIdAngleDynam(Direction.kForward)
+    // );
+    // m_opController.x().whileTrue(
+    //   SysIDRoutines.sysIdAngleDynam(Direction.kReverse)
+    // );
 
+    // m_opController.povDown().whileTrue(
+    //   SysIDRoutines.sysIdDriveQuasi(Direction.kReverse)
+    // );
+    // m_opController.povUp().whileTrue(
+    //   SysIDRoutines.sysIdDriveQuasi(Direction.kForward)
+    // );
+    // m_opController.povLeft().whileTrue(
+    //   SysIDRoutines.sysIdDriveDynam(Direction.kReverse)
+    // );
+    // m_opController.povRight().whileTrue(
+    //   SysIDRoutines.sysIdDriveDynam(Direction.kForward)
+    // );
 
+  }
+  public SwerveSubsystem getSwerveSubsystem() {
+    return m_driveBase;
   }
 
   public void configureNamedCommands() {

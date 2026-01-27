@@ -29,87 +29,35 @@ import edu.wpi.first.wpilibj.RobotBase;
  * constants are needed, to reduce verbosity.
  */
 public final class Constants {
+
+
+
+
+
   public static final class MechConstants {
-    
-    
-
-    //==Turret PID==
-    public static final double kPTurretAngle = 0.0;
-    public static final double kITurretAngle = 0.0;
-    public static final double kDTurretAngle = 0.0;
-
-    //==Turret Angle Feedforward==
-    public static final double kGTurret = 0;
-    public static final double kVTurret = 0;
-    public static final double kATurret = 0;
-
-    // ==Turret Motion Constraints==
-    public static final double kTurretMaxAcceleration = 0;
-    public static final double kTurretMaxVelocity = 0;
-    public static final double kTurretAngleConversionFactor = 0.0; 
-
-    //==Hopper Extension PID==
-    public static final double kPHopperLen = 0.0;
-    public static final double kIHopperLen = 0.0;
-    public static final double kDHopperLen = 0;
-
-    //==Hopper Motion Constraints==
-    public static final double kHoppMaxAccel = 0;
-    public static final double kHoppMaxVel = 0;
-    public static final double kHoppFullExtPos = 0;
-
-    public static final double kHopperLenConversionFactor = 0.0;
-
-    //==Hopper Extension Feedforward==
-    public static final double kSHoppExt = 0;
-    public static final double kGHoppExt = 0;
-    public static final double kVHoppExt = 0;
-    public static final double kAHoppExt = 0;
-
-    
-
     //==CAN Spark ID's==
-    public static final int kTurrLeadID = 0;
-    public static final int kTurrTwoID = 0;
-
-    public static final int kHoppLenID = 0;
+    public static final int kTurrAzimuthID = 15;
     
-
-    public static final int kIntakeID = 0;
-
+    public static final int kTurrHoodID = 16;
+    public static final int kTurrShootID = 17;
+    public static final int kHoppLenID = 18;
+    public static final int kIndexerID = 19;
+    public static final int kIntakeID = 20;
     
 
     //==Offsets==
-    public static final double kTurretAngleOffest = 1;
+    public static final double kTurretAngleOffest = 0;
     public static final double kHopperOffset = 0;
-    public static final int kBreakBeamChannel = 0;
+    
+  }
+  public static final class ChassisConstants {
+    
+    public static final double robotMassKg = 50.0;
+    public static final double bumperLengthX = 29; // inches
+    public static final double bumperWidthY = 29; // inches
   }
   
-  public static final class DriveConstants {
-    // Driving Parameters - Note that these are not the maximum capable speeds of
-    // the robot, rather the allowed maximum speeds
-    public static final double kMaxSpeedMetersPerSecond = 4; // Max speed = 5.0
-    public static final double kMaxAngularSpeed = 2.25 * Math.PI; // radians per second  max is 4 so far?
-    public static final double kWheelDiameter = 0.0762;
-    public static final double kDirectionSlewRate = 2.3; // radians per second
-    public static final double kMagnitudeSlewRate = 2; // percent per second (1 = 100%)
-    public static final double kRotationalSlewRate = 2; // percent per second (1 = 100%)
-
-    // ==Chassis configuration==
-    public static final double kTrackWidth = Units.inchesToMeters(26.5);
-    // ==Distance between centers of right and left wheels on robot==
-    public static final double kWheelBase = Units.inchesToMeters(26.5);
-    // Distance between front and back wheels on robot
-    public static final SwerveDriveKinematics kDriveKinematics = new SwerveDriveKinematics(
-        new Translation2d(kWheelBase / 2, kTrackWidth / 2),
-        new Translation2d(kWheelBase / 2, -kTrackWidth / 2),
-        new Translation2d(-kWheelBase / 2, kTrackWidth / 2),
-        new Translation2d(-kWheelBase / 2, -kTrackWidth / 2));
-
-    
-
-    public static final boolean kGyroReversed = false;
-  }
+  
 
 
   public static final class OIConstants {
@@ -122,7 +70,6 @@ public final class Constants {
     public static final String kturretlime = "limelight-turret";
     public static final String kchassislime = "limelight-chassis";
     public static final double kPVision = 0.0;
-    public static final double kIVision = 0.0;
     public static final double kDVision = 0.0;
   }
 
@@ -149,7 +96,12 @@ public final class Constants {
 
   private static final RobotType robot = RobotType.ROBOT_2026;
   public static final double loopPeriodSecs = 0.02;
-  public static final boolean tuningMode = false;
+  public static boolean tuningMode = false;
+
+  public void startTuning() {
+    tuningMode = true;
+  }
+  
 
   public static RobotType getRobot() {
     if (RobotBase.isReal()) {
@@ -178,6 +130,12 @@ public final class Constants {
 
   public static final Map<RobotType, String> logFolders =
       Map.of(RobotType.ROBOT_2026, "/media/sda2");
+
+public static boolean disableHAL = false;
+
+public void disableHAL() {
+  disableHAL = true;
+}
 
   public static enum RobotType {
     ROBOT_2026, ROBOT_SIMBOT

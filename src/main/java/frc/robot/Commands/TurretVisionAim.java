@@ -1,12 +1,14 @@
 package frc.robot.Commands;
 
 import frc.robot.utils.Constants;
-import frc.robot.utils.Constants.DriveConstants;
+
 import frc.robot.utils.Constants.OIConstants;
 import frc.robot.utils.Constants.Vision;
 import frc.robot.utils.LimelightHelpers;
 import swervelib.math.SwerveMath;
-import frc.robot.subsystems.Turret.Turret;
+import frc.robot.subsystems.Turret.TurretAzimuth;
+import frc.robot.subsystems.Turret.TurretHood;
+
 
 import java.io.File;
 
@@ -20,21 +22,20 @@ import frc.robot.subsystems.Swerve.SwerveSubsystem;
 import edu.wpi.first.math.controller.ProfiledPIDController;
 import edu.wpi.first.math.trajectory.TrapezoidProfile.Constraints;
 import edu.wpi.first.math.trajectory.TrapezoidProfile;
+import edu.wpi.first.math.interpolation.InterpolatingDoubleTreeMap;
 
 
 public class TurretVisionAim extends Command {
 
-    private Turret m_turret = new Turret();
-
-    private static double m_angularVelocity;
-    private static double m_targetError;
+    private TurretAzimuth m_turret = new TurretAzimuth();
+    private TurretHood m_turretHood = new TurretHood();
+    
     
     
 
 
     public TurretVisionAim() {
-        
-        
+        addRequirements(m_turret, m_turretHood);
     }
 
     @Override

@@ -18,10 +18,7 @@ public final class Configs {
             hopperConfig
                     .idleMode(IdleMode.kBrake);
 
-            hopperConfig.closedLoop
-                    .p(0)
-                    .i(0)
-                    .d(0);
+            
 
         }
 
@@ -33,6 +30,26 @@ public final class Configs {
             intakeConfig
                     .idleMode(IdleMode.kBrake);
         }
+    }
+
+    public static final class TurretConfigs {
+        public static final SparkFlexConfig shooterConfig = new SparkFlexConfig();
+        public static final SparkFlexConfig hoodConfig = new SparkFlexConfig();
+        public static final SparkFlexConfig azimuthConfig = new SparkFlexConfig();
+        public static final SparkFlexConfig indexerConfig = new SparkFlexConfig();
+        static {
+            shooterConfig
+                    .idleMode(IdleMode.kBrake);
+            hoodConfig
+                .idleMode(IdleMode.kCoast);        
+
+            indexerConfig
+                .idleMode(IdleMode.kCoast);
+        }
+
+        
+
+        
     }
 
 }

@@ -12,6 +12,7 @@ package frc.robot.subsystems.Swerve;
 import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.DoubleSupplier;
 import java.util.function.Supplier;
@@ -71,7 +72,6 @@ import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine.Config;
 import frc.robot.RobotContainer;
 import frc.robot.Commands.ChassisVisionAim;
 import frc.robot.utils.Constants;
-import frc.robot.utils.Constants.DriveConstants;
 import frc.robot.utils.Constants.Vision;
 import frc.robot.utils.LimelightHelpers;
 import frc.robot.utils.LimelightHelpers.PoseEstimate;
@@ -82,10 +82,11 @@ import swervelib.math.SwerveMath;
 import swervelib.parser.SwerveControllerConfiguration;
 import swervelib.parser.SwerveDriveConfiguration;
 import swervelib.parser.SwerveParser;
+import swervelib.simulation.ironmaple.simulation.drivesims.SwerveDriveSimulation;
 import swervelib.telemetry.SwerveDriveTelemetry;
 import swervelib.telemetry.SwerveDriveTelemetry.TelemetryVerbosity;
 
-import com.ctre.phoenix.led.ColorFlowAnimation.Direction;
+
 import com.ctre.phoenix.motorcontrol.NeutralMode;
 import com.ctre.phoenix6.SignalLogger;
 import com.ctre.phoenix6.configs.CurrentLimitsConfigs;
@@ -110,67 +111,12 @@ public class SwerveSubsystem extends SubsystemBase {
    * Swerve drive object.
    */
   private final SwerveDrive m_swerveDrive;
-  // log file for angle
-  private StringLogEntry m_angleSysIdStateLog;
-  // log file for drive
-  private StringLogEntry m_driveSysIdStateLog;
+
   // logging robot velocity
   private StructPublisher<ChassisSpeeds> robotRelSpeed;
   private double linearVelocity;
   //private final Field2d m_field;
   
-
-  /**
-   * Swerve Angular motor SysId Routine
-   */
-  SysIdRoutine.Config angleConfig = new SysIdRoutine.Config(
-      edu.wpi.first.units.Units.Volts.of(1).per(Second), // Ramp: 1V/s
-      edu.wpi.first.units.Units.Volts.of(6), // Step: 6V (Safer for 550s)
-      edu.wpi.first.units.Units.Seconds.of(10), // Timeout
-      (state) -> {
-        m_angleSysIdStateLog.append(state.toString());
-        if (state != SysIdRoutine.State.kNone) {
-          prepareSteerMotorsForSysId();
-        }
-        edu.wpi.first.wpilibj.DataLogManager.log(String.format("sysid-test-state-angle-neo550:%s", state.toString()));
-      });
-
-  public final SysIdRoutine angleSysIdRoutine = new SysIdRoutine(
-      angleConfig,
-      new SysIdRoutine.Mechanism(
-          (measure) -> setAngleMotorVoltage(measure.in(Volts)),
-          (log) -> logAngleMotor(log),
-          this));
-  /**
-   * End of Angle SysId Routine Setup
-   */
-
-  /**
-   * Drive Motor SysId Routine Setup
-   */
-  SysIdRoutine.Config driveConfig = new SysIdRoutine.Config(
-      edu.wpi.first.units.Units.Volts.of(1.5).per(Second), // Ramp: 0.25V/s
-      edu.wpi.first.units.Units.Volts.of(4), // Step: 4V
-      edu.wpi.first.units.Units.Seconds.of(5), // Timeout
-      (state) -> {
-        m_driveSysIdStateLog.append(state.toString());
-        if (state != SysIdRoutine.State.kNone) {
-          prepareDriveMotorsForSysId();
-        }
-        SignalLogger.writeString("sysid-test-state-drive-krakenx60:", state.toString());
-      });
-
-  public final SysIdRoutine driveSysIdRoutine = new SysIdRoutine(
-      driveConfig, new SysIdRoutine.Mechanism(
-          (measure) -> setDriveMotorVoltage(measure.in(Volts)),
-          (log) -> {
-            logDriveMotor(log);
-          },
-          this));
-
-  /**
-   * End of Drive Motor SysId Routine Setup
-   */
 
   /**
    * Initialize {@link SwerveDrive} with the directory provided.
@@ -182,8 +128,7 @@ public class SwerveSubsystem extends SubsystemBase {
     //SmartDashboard.putData("Field", m_field);
     robotRelSpeed = NetworkTableInstance.getDefault()
         .getStructTopic("Robot Speeds (XYZ)", ChassisSpeeds.struct).publish();
-    m_angleSysIdStateLog = new StringLogEntry(DataLogManager.getLog(), "sysid-test-state-angle-neo550");
-    m_driveSysIdStateLog = new StringLogEntry(DataLogManager.getLog(), "sysid-test-state-drive-krakenx60");
+    
     boolean blueAlliance = false;
     Pose2d startingPose = blueAlliance ? new Pose2d(new Translation2d(Meter.of(1),
         Meter.of(4)),
@@ -195,7 +140,7 @@ public class SwerveSubsystem extends SubsystemBase {
     // objects being created.
     SwerveDriveTelemetry.verbosity = TelemetryVerbosity.HIGH;
     try {
-      m_swerveDrive = new SwerveParser(directory).createSwerveDrive(Constants.DriveConstants.kMaxSpeedMetersPerSecond,
+      m_swerveDrive = new SwerveParser(directory).createSwerveDrive(SwerveConstants.kMaxSpeedMetersPerSecond,
           startingPose);
       // Alternative method if you don't want to supply the conversion factor via JSON
       // files.
@@ -235,7 +180,7 @@ public class SwerveSubsystem extends SubsystemBase {
     //SmartDashboard.putData("Field", m_field);
     m_swerveDrive = new SwerveDrive(driveCfg,
         controllerCfg,
-        Constants.DriveConstants.kMaxSpeedMetersPerSecond,
+        SwerveConstants.kMaxSpeedMetersPerSecond,
         new Pose2d(new Translation2d(Meter.of(2), Meter.of(0)),
             Rotation2d.fromDegrees(0)));
 
@@ -340,84 +285,13 @@ public class SwerveSubsystem extends SubsystemBase {
 
   }
 
-  /**
-   * Applies raw voltage to the Angle Motors (NEO 550s).
-   * STRICTLY for SysId. Bypasses all PID and soft limits.
-   * * @param volts Voltage to apply (-12 to +12)
-   */
-  public void setAngleMotorVoltage(double volts) {
+  
 
-    for (SwerveModule module : m_swerveDrive.getModules()) {
-      SparkMax spark = (SparkMax) module.getAngleMotor().getMotor();
+  
 
-      spark.setVoltage(volts);
-    }
-  }
+  
 
-  /**
-   * Logs the specific data from the Front-Left NEO 550 for SysId.
-   * 
-   */
-  public void logAngleMotor(SysIdRoutineLog log) {
-
-    SwerveModule module = m_swerveDrive.getModules()[0];
-    SparkMax spark = (SparkMax) module.getAngleMotor().getMotor();
-    SparkBaseConfigAccessor accessor = spark.configAccessor;
-    RelativeEncoder encoder = spark.getEncoder();
-    double sign = accessor.getInverted() ? -1.0 : 1.0;
-    double gearRatio = 46.42;
-
-    double rawRotations = encoder.getPosition() * sign;
-    double rawRPM = encoder.getVelocity() * sign;
-
-    double positionRadians = (rawRotations / gearRatio) * 2 * Math.PI;
-
-    double velocityRadPerSec = (rawRPM / gearRatio) * (2 * Math.PI) / 60.0;
-
-    log.motor("angle-neo550")
-        .voltage(Volts.of(spark.getAppliedOutput() * spark.getBusVoltage()))
-        .angularPosition(Radians.of(positionRadians))
-        .angularVelocity(RadiansPerSecond.of(velocityRadPerSec));
-  }
-
-  /**
-   * Applies raw voltage to the Angle Motors (NEO 550s).
-   * STRICTLY for SysId. Bypasses all PID and soft limits.
-   * I lied i need pids to keep every angle motor straight
-   * * @param volts Voltage to apply (-12 to +12)
-   */
-  public void setDriveMotorVoltage(double volts) {
-
-    for (SwerveModule module : m_swerveDrive.getModules()) {
-      TalonFX talon = (TalonFX) module.getDriveMotor().getMotor();
-      
-      talon.setVoltage(volts);
-      module.setAngle(0.0);
-    }
-  }
-
-  /**
-   * Logs the specific data from the front-left drive motor
-   * 
-   */
-  public void logDriveMotor(SysIdRoutineLog log) {
-
-    SwerveModule module = m_swerveDrive.getModules()[0];
-    TalonFX talon = (TalonFX) module.getDriveMotor().getMotor();
-    double gearRatio = 4.71;
-
-    double rawRotations = talon.getPosition().getValueAsDouble();
-    double rawRPM = talon.getPosition().getValueAsDouble();
-
-    double positionMeters = (rawRotations / gearRatio) * DriveConstants.kWheelDiameter;
-
-    double velocityMetersPerSec = (rawRPM / gearRatio) * DriveConstants.kWheelDiameter / 60.0;
-
-    log.motor("drive-krakenx60")
-        .voltage(Volts.of(talon.getMotorVoltage().getValueAsDouble() * talon.getSupplyVoltage().getValueAsDouble()))
-        .linearPosition(Meters.of(positionMeters))
-        .linearVelocity(MetersPerSecond.of(velocityMetersPerSec));
-  }
+  
 
   @Override
   public void simulationPeriodic() {
@@ -923,7 +797,7 @@ public class SwerveSubsystem extends SubsystemBase {
         headingX,
         headingY,
         getHeading().getRadians(),
-        Constants.DriveConstants.kMaxSpeedMetersPerSecond);
+        SwerveConstants.kMaxSpeedMetersPerSecond);
   }
 
   /**
@@ -943,7 +817,7 @@ public class SwerveSubsystem extends SubsystemBase {
         scaledInputs.getY(),
         angle.getRadians(),
         getHeading().getRadians(),
-        Constants.DriveConstants.kMaxSpeedMetersPerSecond);
+        SwerveConstants.kMaxSpeedMetersPerSecond);
   }
 
   /**
@@ -953,6 +827,13 @@ public class SwerveSubsystem extends SubsystemBase {
    */
   public ChassisSpeeds getFieldVelocity() {
     return m_swerveDrive.getFieldVelocity();
+  }
+  /**
+   * Gets the simulated drivetrain for mounting simulated mechanisms to
+   * @return A {@link SwerveDriveSimulation} object
+   */
+  public SwerveDriveSimulation getSimDrive() {
+    return m_swerveDrive.getMapleSimDrive().get();
   }
 
   /**
@@ -1013,84 +894,5 @@ public class SwerveSubsystem extends SubsystemBase {
   public SwerveDrive getSwerveDrive() {
     return m_swerveDrive;
   }
-
-  /**
-   * Command to characterize the robot drive motors using SysId
-   *
-   * @return SysId Drive Command
-   */
-
-  public void prepareSteerMotorsForSysId() {
-    for (SwerveModule module : m_swerveDrive.getModules()) {
-      SparkMax spark = (SparkMax) module.getAngleMotor().getMotor();
-      SparkMaxConfig config = new SparkMaxConfig();
-
-      config
-          .idleMode(SparkBaseConfig.IdleMode.kCoast)
-          .smartCurrentLimit(30);
-
-      config.encoder
-          .positionConversionFactor(1.0)
-          .velocityConversionFactor(1.0);
-      config.softLimit
-          .forwardSoftLimitEnabled(false)
-          .reverseSoftLimitEnabled(false);
-
-      spark.configure(config, SparkBase.ResetMode.kNoResetSafeParameters, SparkBase.PersistMode.kPersistParameters);
-
-    }
-  }
-
-  /**
-   * Commands to characterize the robot angle motors using SysId
-   * 
-   * @param direction
-   * @return Angle motor Dynamic SysId Command
-   */
-  public Command sysIdAngleDynam(SysIdRoutine.Direction direction) {
-    return angleSysIdRoutine.dynamic(direction);
-  }
-
-  /**
-   * 
-   * @param direction
-   * @return Angle motor Quasi SysId Command
-   */
-  public Command sysIdAngleQuasi(SysIdRoutine.Direction direction) {
-    return angleSysIdRoutine.quasistatic(direction);
-  }
-  /**
-   * Wipes and prepares the drive motors for SysId testing
-   */
-  private void prepareDriveMotorsForSysId() {
-    for (SwerveModule module : m_swerveDrive.getModules()) {
-      TalonFX talon = (TalonFX) module.getDriveMotor().getMotor();
-      TalonFXConfiguration config = new TalonFXConfiguration();
-      config.MotorOutput.NeutralMode = NeutralModeValue.Coast;
-
-
-      
-      talon.getConfigurator().apply(config);
-    }
-  }
-
-  /**
-   * Command to characterize the robot drive motors using SysId
-   * 
-   * @param direction
-   * @return SysId Dynamic Drive Command
-   */
-  public Command sysIdDriveDynam(SysIdRoutine.Direction direction) {
-    return driveSysIdRoutine.dynamic(direction);
-  }
-
-  /**
-   * Command to characterize the robot drive motors using SysId
-   * 
-   * @param direction
-   * @return SysId Quasi Drive Command
-   */
-  public Command sysIdDriveQuasi(SysIdRoutine.Direction direction) {
-    return driveSysIdRoutine.quasistatic(direction);
-  }
+  
 }

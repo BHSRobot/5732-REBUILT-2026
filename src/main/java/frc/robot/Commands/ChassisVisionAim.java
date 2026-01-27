@@ -1,7 +1,6 @@
 package frc.robot.Commands;
 
 import frc.robot.utils.Constants;
-import frc.robot.utils.Constants.DriveConstants;
 import frc.robot.utils.Constants.OIConstants;
 import frc.robot.utils.Constants.Vision;
 import frc.robot.utils.LimelightHelpers;
@@ -15,6 +14,7 @@ import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.wpilibj.Filesystem;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
+import frc.robot.subsystems.Swerve.SwerveConstants;
 import frc.robot.subsystems.Swerve.SwerveSubsystem;
 import edu.wpi.first.math.controller.ProfiledPIDController;
 import edu.wpi.first.math.trajectory.TrapezoidProfile.Constraints;
@@ -33,8 +33,8 @@ public class ChassisVisionAim extends Command {
     private ProfiledPIDController aimPIDController = new ProfiledPIDController(
         Vision.kPVision,
         0.0,
-        0.0,
-        new Constraints(DriveConstants.kMaxAngularSpeed, (DriveConstants.kMaxAngularSpeed) * 2)
+        Vision.kDVision,
+        new Constraints(SwerveConstants.kMaxAngularSpeed, (SwerveConstants.kMaxAngularSpeed) * 2)
     );
     
 
@@ -60,13 +60,13 @@ public class ChassisVisionAim extends Command {
             // TX flipped for more intuitive use
             m_targetError = -LimelightHelpers.getTX(Vision.kturretlime);
             m_angularVelocity = m_targetError * Vision.kPVision;
-            m_angularVelocity *= Constants.DriveConstants.kMaxAngularSpeed;
+            m_angularVelocity *= SwerveConstants.kMaxAngularSpeed;
         }
         m_driveBase.drive(
                 SwerveMath.cubeTranslation(new Translation2d(
                     -MathUtil.applyDeadband(m_driverController.getLeftY(),OIConstants.kDriveDeadband),
                     -MathUtil.applyDeadband(m_driverController.getLeftX(), OIConstants.kDriveDeadband)))
-                    .times(DriveConstants.kMaxSpeedMetersPerSecond),
+                    .times(SwerveConstants.kMaxSpeedMetersPerSecond),
                 m_angularVelocity,
                 true);
     }
