@@ -39,8 +39,6 @@ public class Robot extends LoggedRobot {
   private Command m_autonomousCommand;
 
   private RobotContainer m_robotContainer;
-  private RebuiltArena2026 m_arena = new RebuiltArena2026();
-  
 
   /**
    * This function is run when the robot is first started up and should be used
@@ -49,6 +47,7 @@ public class Robot extends LoggedRobot {
    */
   @Override
   public void robotInit() {
+
     FollowPathCommand.warmupCommand().schedule();
     // Set up data receivers & replay source
     switch (Constants.currentMode) {
@@ -172,23 +171,27 @@ public class Robot extends LoggedRobot {
   public void testPeriodic() {
   }
 
-  
-
   @Override
   public void simulationInit() {
-    
-    
-    m_arena.clearGamePieces();
-    m_arena.placeGamePiecesOnField();
+    var arena = SimulatedArena.getInstance();
+    if (arena != null) {
+      arena.clearGamePieces();
+      arena.placeGamePiecesOnField();
+    }
 
   }
 
   @Override
   public void simulationPeriodic() {
-    m_arena.simulationPeriodic();
+    var arena = SimulatedArena.getInstance();
+    if (arena != null) {
 
-    Pose3d[] fuelsPoses = m_arena
+    
+    arena.simulationPeriodic();
+
+    Pose3d[] fuelsPoses = arena
         .getGamePiecesArrayByType("Fuel");
+    
     // Publish to telemetry using AdvantageKit
     if (fuelsPoses.length > 0) {
       // Only log every 2nd or 3rd tick to save CPU
@@ -197,6 +200,8 @@ public class Robot extends LoggedRobot {
       }
     }
     Logger.recordOutput("FieldSimulation/FuelCount", fuelsPoses.length);
+    
 
+    }
   }
 }

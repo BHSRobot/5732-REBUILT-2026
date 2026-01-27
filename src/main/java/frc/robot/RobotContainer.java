@@ -36,6 +36,7 @@ import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
 
 import frc.robot.Commands.ChassisVisionAim;
+import frc.robot.sim.RebuiltArena2026;
 import frc.robot.subsystems.Swerve.SwerveConstants;
 
 //import frc.robot.Commands.Autos;
@@ -50,6 +51,7 @@ import frc.robot.Robot;
 
 
 import swervelib.math.SwerveMath;
+import swervelib.simulation.ironmaple.simulation.SimulatedArena;
 
 public class RobotContainer {
   // field relative val
@@ -78,18 +80,22 @@ public class RobotContainer {
   // private Autos auto;
 
   public RobotContainer() {
-    m_driveBase = new SwerveSubsystem(new File(Filesystem.getDeployDirectory(), "swerve/"));
-    autoChooser = new LoggedDashboardChooser<>("AutoChooser", AutoBuilder.buildAutoChooser());
     if (RobotBase.isSimulation()) {
-      m_intake = new Intake(new IntakeIOSim(m_driveBase.getSimDrive()));
-      
-    }
-    else {
-      m_intake = new Intake(new IntakeIOReal());
+        SimulatedArena.overrideInstance(new RebuiltArena2026());
     }
 
-    configureBindings();
-    configureNamedCommands();
+    
+    m_driveBase = new SwerveSubsystem(new File(Filesystem.getDeployDirectory(), "swerve/"));
+
+    
+    autoChooser = new LoggedDashboardChooser<>("AutoChooser", AutoBuilder.buildAutoChooser());
+
+    if (RobotBase.isSimulation()) {
+        
+        m_intake = new Intake(new IntakeIOSim(m_driveBase.getSimDrive()));
+    } else {
+        m_intake = new Intake(new IntakeIOReal());
+    }
 
     // auto = new Autos();
 
