@@ -126,7 +126,8 @@ public class RobotContainer {
             },
             m_driveBase));
     
-    
+    configureBindings();
+    configureNamedCommands();
   }
 
   private void configureBindings() {

@@ -15,10 +15,10 @@ public class RebuiltArena2026 extends SimulatedArena {
         public RebuiltFieldMap() {
             super();
 
-            this.addBorderLine(new Translation2d(0, 0), new Translation2d(16.54, 0));
-            this.addBorderLine(new Translation2d(16.54, 0), new Translation2d(16.54, 8.21));
-            this.addBorderLine(new Translation2d(16.54, 8.21), new Translation2d(0, 8.21));
-            this.addBorderLine(new Translation2d(0, 8.21), new Translation2d(0, 0));
+            this.addBorderLine(new Translation2d(0, 0), new Translation2d(16.46, 0));
+            this.addBorderLine(new Translation2d(16.46, 0), new Translation2d(16.46, 8.23));
+            this.addBorderLine(new Translation2d(16.46, 8.23), new Translation2d(0, 8.23));
+            this.addBorderLine(new Translation2d(0, 8.23), new Translation2d(0, 0));
 
         }
     }
@@ -41,8 +41,8 @@ public class RebuiltArena2026 extends SimulatedArena {
         double buffer = 0.01;
         double fuelRadius = Inches.of(2.955).in(Meters);
         double fuelDiameter = fuelRadius * 2.0; // meters
-        double zoneWidthMeters = 12 * fuelDiameter;
-        double zoneLengthMeters = 38 * fuelDiameter;
+        double zoneWidthMeters = 2 * fuelDiameter;
+        double zoneLengthMeters = 3 * fuelDiameter;
         // Center of the zone on the field
         double centerX = 8.25;
         double centerY = 4.10;

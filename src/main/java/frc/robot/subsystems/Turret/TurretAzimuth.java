@@ -27,6 +27,7 @@ public class TurretAzimuth extends SubsystemBase {
         m_mainVortex = new SparkFlex(MechConstants.kTurrAzimuthID, MotorType.kBrushless);
         m_mainVortex.configure(Configs.TurretConfigs.azimuthConfig, ResetMode.kNoResetSafeParameters, PersistMode.kPersistParameters);
         m_turretClosedLoop = m_mainVortex.getClosedLoopController();
+        Configs.TurretConfigs.azimuthConfig.closedLoop.pid(TurretConstants.kPTurretAngle, 0.0, TurretConstants.kDTurretAngle);
     }
 
 
