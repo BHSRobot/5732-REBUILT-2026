@@ -48,6 +48,7 @@ import frc.robot.subsystems.Intake.Intake;
 import frc.robot.subsystems.Intake.IntakeIOReal;
 import frc.robot.subsystems.Intake.IntakeIOSim;
 import frc.robot.Robot;
+import frc.robot.utils.SysIDRoutines;
 
 
 import swervelib.math.SwerveMath;
@@ -62,6 +63,7 @@ public class RobotContainer {
   //public for now because idk how else sysidroutines will use it
   public final SwerveSubsystem m_driveBase;
   private final Intake m_intake;
+  private final SysIDRoutines m_routines;
   
 
 
@@ -87,14 +89,14 @@ public class RobotContainer {
     
     m_driveBase = new SwerveSubsystem(new File(Filesystem.getDeployDirectory(), "swerve/"));
 
-    
+    m_routines = new SysIDRoutines(m_driveBase);
     autoChooser = new LoggedDashboardChooser<>("AutoChooser", AutoBuilder.buildAutoChooser());
 
     if (RobotBase.isSimulation()) {
         
         m_intake = new Intake(new IntakeIOSim(m_driveBase.getSimDrive()));
     } else {
-        m_intake = new Intake(new IntakeIOReal());
+        m_intake = null;
     }
 
     // auto = new Autos();
@@ -164,18 +166,18 @@ public class RobotContainer {
     
     // ==== SYS ID BINDS (comment these out when not in use) ====
 
-    // m_opController.y().whileTrue(
-    //   SysIDRoutines.sysIdAngleQuasi(Direction.kForward)
-    // );
-    // m_opController.a().whileTrue(
-    //   SysIDRoutines.sysIdAngleQuasi(Direction.kReverse)
-    // );
-    // m_opController.b().whileTrue(
-    //   SysIDRoutines.sysIdAngleDynam(Direction.kForward)
-    // );
-    // m_opController.x().whileTrue(
-    //   SysIDRoutines.sysIdAngleDynam(Direction.kReverse)
-    // );
+    m_opController.y().whileTrue(
+      m_routines.sysIdAngleQuasi(Direction.kForward)
+    );
+    m_opController.a().whileTrue(
+      m_routines.sysIdAngleQuasi(Direction.kReverse)
+    );
+    m_opController.b().whileTrue(
+      m_routines.sysIdAngleDynam(Direction.kForward)
+    );
+    m_opController.x().whileTrue(
+      m_routines.sysIdAngleDynam(Direction.kReverse)
+    );
 
     // m_opController.povDown().whileTrue(
     //   SysIDRoutines.sysIdDriveQuasi(Direction.kReverse)

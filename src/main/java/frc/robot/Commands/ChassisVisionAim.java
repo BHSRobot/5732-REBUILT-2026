@@ -23,7 +23,7 @@ import edu.wpi.first.math.trajectory.TrapezoidProfile;
 
 public class ChassisVisionAim extends Command {
 
-    private SwerveSubsystem m_driveBase;
+    //private SwerveSubsystem m_driveBase;
     private CommandXboxController m_driverController = new CommandXboxController(
             OIConstants.kDriverControllerPort);
 
@@ -40,11 +40,11 @@ public class ChassisVisionAim extends Command {
 
 
     public ChassisVisionAim(SwerveSubsystem driveBase, CommandXboxController controller) {
-        this.m_driveBase = driveBase;
+        //this.m_driveBase = driveBase;
         this.m_driverController = controller;
 
         // Require the drivebase so no other drive command runs at the same time
-        addRequirements(m_driveBase);
+        //addRequirements(m_driveBase);
     }
 
     @Override
@@ -62,18 +62,18 @@ public class ChassisVisionAim extends Command {
             m_angularVelocity = m_targetError * Vision.kPVision;
             m_angularVelocity *= SwerveConstants.kMaxAngularSpeed;
         }
-        m_driveBase.drive(
-                SwerveMath.cubeTranslation(new Translation2d(
-                    -MathUtil.applyDeadband(m_driverController.getLeftY(),OIConstants.kDriveDeadband),
-                    -MathUtil.applyDeadband(m_driverController.getLeftX(), OIConstants.kDriveDeadband)))
-                    .times(SwerveConstants.kMaxSpeedMetersPerSecond),
-                m_angularVelocity,
-                true);
+        // m_driveBase.drive(
+        //         SwerveMath.cubeTranslation(new Translation2d(
+        //             -MathUtil.applyDeadband(m_driverController.getLeftY(),OIConstants.kDriveDeadband),
+        //             -MathUtil.applyDeadband(m_driverController.getLeftX(), OIConstants.kDriveDeadband)))
+        //             .times(SwerveConstants.kMaxSpeedMetersPerSecond),
+        //         m_angularVelocity,
+        //         true);
     }
 
     @Override
     public void end(boolean interrupted) {
-        m_driveBase.setChassisSpeeds(new ChassisSpeeds(0, 0, 0));
+        //m_driveBase.setChassisSpeeds(new ChassisSpeeds(0, 0, 0));
     }
 
     @Override

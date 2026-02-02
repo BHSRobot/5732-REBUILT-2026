@@ -27,15 +27,15 @@ import edu.wpi.first.math.interpolation.InterpolatingDoubleTreeMap;
 
 public class TurretVisionAim extends Command {
 
-    private TurretAzimuth m_turret = new TurretAzimuth();
-    private TurretHood m_turretHood = new TurretHood();
+    //private TurretAzimuth m_turret = new TurretAzimuth();
+    //private TurretHood m_turretHood = new TurretHood();
     
     
     
 
 
     public TurretVisionAim() {
-        addRequirements(m_turret, m_turretHood);
+        //addRequirements(m_turret, m_turretHood);
     }
 
     @Override
