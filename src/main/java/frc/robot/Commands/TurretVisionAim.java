@@ -1,63 +1,60 @@
 package frc.robot.Commands;
-
-import frc.robot.utils.Constants;
-
-import frc.robot.utils.Constants.OIConstants;
-import frc.robot.utils.Constants.Vision;
-import frc.robot.utils.LimelightHelpers;
-import swervelib.math.SwerveMath;
-import frc.robot.subsystems.Turret.TurretAzimuth;
-import frc.robot.subsystems.Turret.TurretHood;
-
-
-import java.io.File;
-
-import edu.wpi.first.math.MathUtil;
+import edu.wpi.first.math.geometry.Pose2d;
+import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
-import edu.wpi.first.math.kinematics.ChassisSpeeds;
-import edu.wpi.first.wpilibj.Filesystem;
+import edu.wpi.first.wpilibj.DriverStation;
+import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj2.command.Command;
-import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import frc.robot.subsystems.Swerve.SwerveSubsystem;
-import edu.wpi.first.math.controller.ProfiledPIDController;
-import edu.wpi.first.math.trajectory.TrapezoidProfile.Constraints;
-import edu.wpi.first.math.trajectory.TrapezoidProfile;
-import edu.wpi.first.math.interpolation.InterpolatingDoubleTreeMap;
 
+import frc.robot.subsystems.Turret.TurretAzimuth;
+import frc.robot.utils.FieldConstants;
+import edu.wpi.first.math.geometry.Translation3d;
 
 public class TurretVisionAim extends Command {
+    private final SwerveSubsystem driveSubsystem;
+    private final TurretAzimuth turretAngle;
 
-    //private TurretAzimuth m_turret = new TurretAzimuth();
-    //private TurretHood m_turretHood = new TurretHood();
-    
-    
-    
+    private Translation3d targetLocation;
 
+    public TurretVisionAim(SwerveSubsystem drive, TurretAzimuth turret) {
+        targetLocation = new Translation3d(0,0,0);
+        this.driveSubsystem = drive;
+        this.turretAngle = turret;
 
-    public TurretVisionAim() {
-        //addRequirements(m_turret, m_turretHood);
-    }
+        // Declare dependencies so the scheduler knows this command uses these
+        // subsystems
+        addRequirements(turretAngle);
 
-    @Override
-    public void initialize() {
-        
     }
 
     @Override
     public void execute() {
-        
-        
-    }
+        if (DriverStation.getAlliance().isPresent()) {
+            if (DriverStation.getAlliance().get() == DriverStation.Alliance.Blue) {
+                targetLocation = FieldConstants.HUB_BLUE;
+            }
+            if (DriverStation.getAlliance().get() == DriverStation.Alliance.Red) {
+                targetLocation = FieldConstants.HUB_RED;
+            }
+        }
 
-    @Override
-    public void end(boolean interrupted) {
-        
+        Pose2d robotPose = driveSubsystem.getPose();
+
+        double dx = targetLocation.getX() - robotPose.getX();
+        double dy = targetLocation.getY() - robotPose.getY();
+
+        Rotation2d angleToTarget = new Rotation2d(Math.atan2(dy, dx));
+
+        Rotation2d turretSetpoint = angleToTarget.minus(robotPose.getRotation());
+
+        turretAngle.setTargetAngle(turretSetpoint.getDegrees());
+
     }
 
     @Override
     public boolean isFinished() {
-        return true;
+        // Usually false for a default command, or finish when aimed
+        return false;
     }
-
 }
-

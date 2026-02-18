@@ -36,7 +36,7 @@ import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
 
 import frc.robot.Commands.ChassisVisionAim;
-import frc.robot.sim.RebuiltArena2026;
+
 import frc.robot.subsystems.Swerve.SwerveConstants;
 
 //import frc.robot.Commands.Autos;
@@ -53,6 +53,7 @@ import frc.robot.utils.SysIDRoutines;
 
 import swervelib.math.SwerveMath;
 import swervelib.simulation.ironmaple.simulation.SimulatedArena;
+import swervelib.simulation.ironmaple.simulation.seasonspecific.rebuilt2026.Arena2026Rebuilt;
 
 public class RobotContainer {
   // field relative val
@@ -63,7 +64,7 @@ public class RobotContainer {
   //public for now because idk how else sysidroutines will use it
   public final SwerveSubsystem m_driveBase;
   private final Intake m_intake;
-  private final SysIDRoutines m_routines;
+  // private final SysIDRoutines m_routines;
   
 
 
@@ -83,13 +84,13 @@ public class RobotContainer {
 
   public RobotContainer() {
     if (RobotBase.isSimulation()) {
-        SimulatedArena.overrideInstance(new RebuiltArena2026());
+        SimulatedArena.overrideInstance(new Arena2026Rebuilt());
     }
 
     
     m_driveBase = new SwerveSubsystem(new File(Filesystem.getDeployDirectory(), "swerve/"));
 
-    m_routines = new SysIDRoutines(m_driveBase);
+    //m_routines = new SysIDRoutines(m_driveBase);
     autoChooser = new LoggedDashboardChooser<>("AutoChooser", AutoBuilder.buildAutoChooser());
 
     if (RobotBase.isSimulation()) {
@@ -166,18 +167,18 @@ public class RobotContainer {
     
     // ==== SYS ID BINDS (comment these out when not in use) ====
 
-    m_opController.y().whileTrue(
-      m_routines.sysIdAngleQuasi(Direction.kForward)
-    );
-    m_opController.a().whileTrue(
-      m_routines.sysIdAngleQuasi(Direction.kReverse)
-    );
-    m_opController.b().whileTrue(
-      m_routines.sysIdAngleDynam(Direction.kForward)
-    );
-    m_opController.x().whileTrue(
-      m_routines.sysIdAngleDynam(Direction.kReverse)
-    );
+    // m_opController.y().whileTrue(
+    //   m_routines.sysIdAngleQuasi(Direction.kForward)
+    // );
+    // m_opController.a().whileTrue(
+    //   m_routines.sysIdAngleQuasi(Direction.kReverse)
+    // );
+    // m_opController.b().whileTrue(
+    //   m_routines.sysIdAngleDynam(Direction.kForward)
+    // );
+    // m_opController.x().whileTrue(
+    //   m_routines.sysIdAngleDynam(Direction.kReverse)
+    // );
 
     // m_opController.povDown().whileTrue(
     //   SysIDRoutines.sysIdDriveQuasi(Direction.kReverse)
