@@ -5,6 +5,7 @@ import frc.robot.utils.Configs;
 
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import edu.wpi.first.wpilibj.DigitalInput;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import frc.robot.utils.Constants;
 
 import com.revrobotics.spark.SparkClosedLoopController;
@@ -65,7 +66,7 @@ public class Hopper extends SubsystemBase {
     public void periodic() {
         Logger.recordOutput("Hopper/targetHeight", m_targetHeight);
         Logger.recordOutput("Hopper/currentHeight", m_currentHeight);
-        if (Constants.tuningMode) {
+        if (SmartDashboard.getBoolean("TuningModeActive", false)) {
             if (kHopperP.hasChanged(hashCode()) || kHopperD.hasChanged(hashCode()))  {
                 SparkFlexConfig updateConfig = new SparkFlexConfig();
                 updateConfig.closedLoop.pid(kHopperP.get(), 0.0, kHopperD.get());

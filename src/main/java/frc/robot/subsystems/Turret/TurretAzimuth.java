@@ -1,4 +1,5 @@
 package frc.robot.subsystems.Turret;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import com.revrobotics.spark.SparkFlex;
 import com.revrobotics.spark.SparkBase.ControlType;
@@ -42,7 +43,7 @@ public class TurretAzimuth extends SubsystemBase {
         Logger.recordOutput("Turret/targetAngle", m_targetAngle);
         PTurretAngle.initDefault(TurretConstants.kPTurretAngle);
         DTurretAngle.initDefault(TurretConstants.kDTurretAngle);
-        if (Constants.tuningMode) {
+        if (SmartDashboard.getBoolean("TuningModeActive", false)) {
             if (PTurretAngle.hasChanged(hashCode()) || DTurretAngle.hasChanged(hashCode()))  {
                 SparkFlexConfig updateConfig = new SparkFlexConfig();
                 updateConfig.closedLoop.pid(PTurretAngle.get(), 0.0, DTurretAngle.get());

@@ -22,6 +22,7 @@ import edu.wpi.first.wpilibj.RobotBase;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.shuffleboard.Shuffleboard;
 import edu.wpi.first.wpilibj.shuffleboard.ShuffleboardTab;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.InstantCommand;
@@ -36,7 +37,7 @@ import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
 
 import frc.robot.Commands.ChassisVisionAim;
-
+import frc.robot.Commands.TurretVisionAim;
 import frc.robot.subsystems.Swerve.SwerveConstants;
 
 //import frc.robot.Commands.Autos;
@@ -46,6 +47,7 @@ import frc.robot.subsystems.Swerve.SwerveSubsystem;
 import frc.robot.subsystems.Turret.Indexer;
 import frc.robot.subsystems.Turret.TurretAzimuth;
 import frc.robot.subsystems.Turret.TurretShooter;
+import frc.robot.subsystems.Turret.TurretShooter.ShooterState;
 import frc.robot.utils.Constants.OIConstants;
 import frc.robot.subsystems.Intake.Intake;
 import frc.robot.subsystems.Intake.IntakeIOReal;
@@ -145,6 +147,11 @@ public class RobotContainer {
     
     configureBindings();
     configureNamedCommands();
+    SmartDashboard.putBoolean("TuningModeActive", false);
+
+    m_turretAzimuth.setDefaultCommand(
+      new TurretVisionAim(m_driveBase, m_turretAzimuth, m_shooter)
+    );
   }
 
   private void configureBindings() {
@@ -170,14 +177,15 @@ public class RobotContainer {
     // m_driverController.leftTrigger().whileTrue(
     //   m_intake.ejectCommand()
     // );
-
+    
     // ==== OPERATOR BINDS ====
     // HOLD A to aim the limelight at your target
     //
     //
     // m_opController.a().whileTrue(
     //   new VisionAim(m_driveBase, m_driverController));
-
+    m_driverController.rightTrigger().whileTrue(
+        new RunCommand(() -> m_shooter.setAiming()));
     
     // ==== SYS ID BINDS (comment these out when not in use) ====
 
@@ -236,16 +244,6 @@ public class RobotContainer {
   }
 
   public void setupDriverTab() {
-    ShuffleboardTab driverTab = Shuffleboard.getTab("Driver");
-    driverTab.addDouble("Time Remaining", () -> {
-      return Timer.getMatchTime();
-    });
-    driverTab.addString("Event Name", () -> {
-      return DriverStation.getEventName();
-    });
-    driverTab.addString("Alliance Color", () -> {
-      return DriverStation.getAlliance().toString();
-    });
 
     CameraServer.startAutomaticCapture();
   }

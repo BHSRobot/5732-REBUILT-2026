@@ -31,7 +31,7 @@ public class IntakeIOSim implements IntakeIO {
                 intakeSimulation = IntakeSimulation.OverTheBumperIntake("Fuel", driveSim, Meters.of(0.6),
                                 Meters.of(0.2),
                                 IntakeSimulation.IntakeSide.FRONT, 10);
-                intakeSimPID = new PIDController(0.1, 0.0, 0.0);
+                intakeSimPID = new PIDController(1, 0.0, 0.0);
                 intakeExtendPID = new PIDController(0.1, 0.0, 0.0);
 
         }

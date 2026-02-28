@@ -42,8 +42,9 @@ public final class Constants {
     public static final int kTurrShootID = 17;
     public static final int kHoppLenID = 18;
     public static final int kIndexerID = 19;
-    public static final int kIntakeID = 20;
-    public static final int kIntakeExtendID = 21;
+    public static final int kIndexRollerID = 20;
+    public static final int kIntakeID = 21;
+    public static final int kIntakeExtendID = 22;
     
 
     //==Offsets==
@@ -97,11 +98,7 @@ public final class Constants {
 
   private static final RobotType robot = RobotType.ROBOT_2026;
   public static final double loopPeriodSecs = 0.02;
-  public static boolean tuningMode = false;
-
-  public void startTuning() {
-    tuningMode = true;
-  }
+  
   
 
   public static RobotType getRobot() {

@@ -15,6 +15,8 @@ import java.util.function.DoubleSupplier;
 import frc.robot.utils.Constants;
 import org.littletonrobotics.junction.networktables.LoggedNetworkNumber;
 
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
+
 /**
  * Class for a tunable number. Gets value from dashboard in tuning mode, returns default if not or
  * value not in dashboard.
@@ -58,7 +60,7 @@ public class LoggedTunableNumber implements DoubleSupplier {
     if (!hasDefault) {
       hasDefault = true;
       this.defaultValue = defaultValue;
-      if (Constants.tuningMode && !Constants.disableHAL) {
+      if (SmartDashboard.getBoolean("TuningModeActive", false) && !Constants.disableHAL) {
         dashboardNumber = new LoggedNetworkNumber(key, defaultValue);
       }
     }
@@ -73,7 +75,7 @@ public class LoggedTunableNumber implements DoubleSupplier {
     if (!hasDefault) {
       return 0.0;
     } else {
-      return Constants.tuningMode && !Constants.disableHAL ? dashboardNumber.get() : defaultValue;
+      return SmartDashboard.getBoolean("TuningModeActive", false) && !Constants.disableHAL ? dashboardNumber.get() : defaultValue;
     }
   }
 
