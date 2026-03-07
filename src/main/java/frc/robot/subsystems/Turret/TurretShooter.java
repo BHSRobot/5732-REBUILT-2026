@@ -71,8 +71,8 @@ public class TurretShooter extends SubsystemBase {
         m_hoodMotor.configure(Configs.TurretConfigs.hoodConfig, ResetMode.kNoResetSafeParameters,
                 PersistMode.kPersistParameters);
         m_turretHoodClosedLoop = m_hoodMotor.getClosedLoopController();
-
-        // ALL LUT SETUP GOES HERE!!
+        populateLookupTables();
+        
 
     }
 
@@ -126,6 +126,24 @@ public class TurretShooter extends SubsystemBase {
             setFlywheelRPM(targetRpm);
             setTargetHoodAngle(targetHood);
         }
+    }
+
+    /**
+     * Estimates the Time of Flight of the game piece for a given distance
+     * @param distanceToTarget The distance to the virtual target in meters
+     * @return Time of flight in seconds
+     */
+    public double getEstimatedTimeOfFlight(double distanceToTarget) {
+        // Return 0.0 if the table is empty to prevent crashes during setup
+        Double estimatedTOF = tofTable.get(distanceToTarget);
+
+        
+        return (estimatedTOF == null) ? 0.0 : estimatedTOF;
+    }
+
+    private void populateLookupTables() {
+        // ALL LUT SETUP GOES HERE!!
+
     }
     
     // == getters and setters == 

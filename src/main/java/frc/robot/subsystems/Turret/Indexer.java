@@ -23,7 +23,8 @@ public class Indexer extends SubsystemBase {
     private final SparkMax m_rollerMotor;
     private final RelativeEncoder m_rollerEncoder;
     private final SparkClosedLoopController m_indexerClosedLoop;
-
+    private double m_currentRPM;
+    private double m_targetRPM;
     public static final LoggedTunableNumber PIndexer = new LoggedTunableNumber("Indexer/kP");
     public static final LoggedTunableNumber DIndexer = new LoggedTunableNumber("Indexer/kD");
 
@@ -39,14 +40,21 @@ public class Indexer extends SubsystemBase {
         m_rollerMotor = new SparkMax(MechConstants.kIndexRollerID, MotorType.kBrushless);
         m_rollerEncoder = m_rollerMotor.getEncoder();
         m_rollerMotor.configure(Configs.IndexerConfigs.rollerConfig, ResetMode.kNoResetSafeParameters,PersistMode.kPersistParameters);
+        m_currentRPM = 0.0;
+        m_targetRPM = 0.0;
+
     }
+
     public void setIndexRPM(double rpm) {
         m_indexerClosedLoop.setSetpoint(rpm, ControlType.kMAXMotionVelocityControl);
+        m_targetRPM = rpm;
     }
+
     public enum IndexerState {
         RUNNING, DISABLED
     }
     IndexerState indexState = IndexerState.DISABLED;
+
     public void setIndexerState(IndexerState state) {
         indexState = state;
     }
@@ -57,7 +65,6 @@ public class Indexer extends SubsystemBase {
     }
 
     public void rollerWarmup() {
-        boolean warmedUp = false;
         m_rollerMotor.set(-.25);
     }
 
@@ -65,6 +72,16 @@ public class Indexer extends SubsystemBase {
         return this.runEnd(() -> setIndexerState(IndexerState.RUNNING),
         () -> setIndexerState(IndexerState.DISABLED));
     }
+
+    
+    public double getTargetRPM() {
+        return m_targetRPM;
+    }
+
+    public double getCurrentRPM() {
+        return m_currentRPM;
+    }
+
 
 
 
@@ -78,11 +95,13 @@ public class Indexer extends SubsystemBase {
 
     @Override
     public void periodic() {
+        m_currentRPM = m_indexerEncoder.getVelocity();
         switch (indexState) {
             case DISABLED -> {
                 stop();
             }
             case RUNNING -> {
+                //rollerWarmup();
                 setIndexRawSpeed();
             }
         }

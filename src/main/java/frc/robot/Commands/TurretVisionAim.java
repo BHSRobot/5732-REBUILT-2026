@@ -34,28 +34,72 @@ public class TurretVisionAim extends Command {
 
     @Override
     public void execute() {
+        
+        Translation2d actualTargetLocation = new Translation2d(0, 0);
         if (DriverStation.getAlliance().isPresent()) {
             if (DriverStation.getAlliance().get() == DriverStation.Alliance.Blue) {
-                targetLocation = FieldConstants.HUB_BLUE;
-            }
-            if (DriverStation.getAlliance().get() == DriverStation.Alliance.Red) {
-                targetLocation = FieldConstants.HUB_RED;
+                actualTargetLocation = FieldConstants.HUB_BLUE;
+            } else {
+                actualTargetLocation = FieldConstants.HUB_RED;
             }
         }
-        targetLocation = targetLocation.minus(new Translation2d(driveSubsystem.getRobotVelocity().vxMetersPerSecond,
-                        driveSubsystem.getRobotVelocity().vyMetersPerSecond));
 
-        Pose2d robotPose = driveSubsystem.getPose();
+        
+        double latencySeconds = 0.15; // mechanical delay
+        Pose2d currentPose = driveSubsystem.getPose();
+        var speeds = driveSubsystem.getRobotVelocity(); // Assuming this returns ChassisSpeeds
 
-        double dx = targetLocation.getX() - robotPose.getX();
-        double dy = targetLocation.getY() - robotPose.getY();
+        
+        edu.wpi.first.math.geometry.Twist2d twist = new edu.wpi.first.math.geometry.Twist2d(
+            speeds.vxMetersPerSecond * latencySeconds,
+            speeds.vyMetersPerSecond * latencySeconds,
+            speeds.omegaRadiansPerSecond * latencySeconds
+        );
+        
+        // apply twist to get where the robot WILL be when the ball actually fires
+        Pose2d predictedPose = currentPose.exp(twist);
+        Translation2d robotLocation = predictedPose.getTranslation();
 
-        Rotation2d angleToTarget = new Rotation2d(Math.atan2(dy, dx));
+        
+        Translation2d fieldRelativeVelocity = new Translation2d(
+            speeds.vxMetersPerSecond, 
+            speeds.vyMetersPerSecond
+        ).rotateBy(currentPose.getRotation());
 
-        Rotation2d virtualTurretSetpoint = angleToTarget.minus(robotPose.getRotation());
-        m_turretShooter.prepareToShoot(Math.sqrt(Math.pow(dx, 2) + Math.pow(dy, 2)));
+
+        // 4. The Iterative ToF Solver
+        double virtualDistance = robotLocation.getDistance(actualTargetLocation);
+        double timeOfFlight = 0.0;
+        Translation2d virtualTarget = actualTargetLocation;
+
+        
+        for (int i = 0; i < 4; i++) {
+            
+            timeOfFlight = m_turretShooter.getEstimatedTimeOfFlight(virtualDistance);
+            
+            
+            Translation2d offset = fieldRelativeVelocity.times(timeOfFlight);
+            
+            
+            virtualTarget = actualTargetLocation.minus(offset);
+            
+           
+            virtualDistance = robotLocation.getDistance(virtualTarget);
+        }
+
+        
+        double dx = virtualTarget.getX() - robotLocation.getX();
+        double dy = virtualTarget.getY() - robotLocation.getY();
+
+        // field-centric angle to the virtual target
+        Rotation2d fieldRelativeAngleToTarget = new Rotation2d(Math.atan2(dy, dx));
+
+        // turret setpoint is field-centric angle subtracted by the robot's predicted rotation
+        Rotation2d virtualTurretSetpoint = fieldRelativeAngleToTarget.minus(predictedPose.getRotation());
+
+        // feed final converged distance to shooter and angle to turret
+        m_turretShooter.prepareToShoot(virtualDistance);
         m_turretAngle.setTargetAngle(virtualTurretSetpoint.getDegrees());
-
     }
 
     @Override

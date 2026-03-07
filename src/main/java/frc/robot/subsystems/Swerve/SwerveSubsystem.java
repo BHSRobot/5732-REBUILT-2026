@@ -204,12 +204,12 @@ public class SwerveSubsystem extends SubsystemBase {
             Rotation2d.fromDegrees(0)));
     LimelightHelpers.setCameraPose_RobotSpace(
       Vision.kchassislime, 
-      SwerveConstants.CHASSIS_CAMERA_FORWARD_OFFSET, 
+      Constants.Vision.CHASSIS_CAMERA_FORWARD_OFFSET, 
       0, 
-      SwerveConstants.CHASSIS_CAMERA_Z_HEIGHT, 
-      SwerveConstants.CHASSIS_CAMERA_ROLL, 
-      SwerveConstants.CHASSIS_CAMERA_PITCH, 
-      SwerveConstants.CHASSIS_CAMERA_YAW
+      Constants.Vision.CHASSIS_CAMERA_Z_HEIGHT, 
+      Constants.Vision.CHASSIS_CAMERA_ROLL, 
+      Constants.Vision.CHASSIS_CAMERA_PITCH, 
+      Constants.Vision.CHASSIS_CAMERA_YAW
     );
     configureCurrentLimits();
 
@@ -697,14 +697,14 @@ public class SwerveSubsystem extends SubsystemBase {
   public void updateTurretCameraExtrinsics(Rotation2d turretAngle) {
     
     // Assuming the camera faces perfectly forward on the turret, it sits at (Radius, 0)
-    Translation2d cameraRelativeToTurret = new Translation2d(SwerveConstants.CAMERA_RADIUS_FROM_TURRET, 0.0);
+    Translation2d cameraRelativeToTurret = new Translation2d(Constants.Vision.CAMERA_RADIUS_FROM_TURRET, 0.0);
 
     
     Translation2d rotatedCameraOffset = cameraRelativeToTurret.rotateBy(turretAngle);
 
    
-    double finalCameraForward = SwerveConstants.TURRET_CENTER_X_OFFSET + rotatedCameraOffset.getX();
-    double finalCameraSide = SwerveConstants.TURRET_CENTER_Y_OFFSET + rotatedCameraOffset.getY();
+    double finalCameraForward = Constants.Vision.TURRET_CENTER_X_OFFSET + rotatedCameraOffset.getX();
+    double finalCameraSide = Constants.Vision.TURRET_CENTER_Y_OFFSET + rotatedCameraOffset.getY();
     
     
     double finalCameraYaw = turretAngle.getDegrees();
@@ -714,9 +714,9 @@ public class SwerveSubsystem extends SubsystemBase {
       Vision.kturretlime, 
       finalCameraForward, 
       finalCameraSide, 
-      SwerveConstants.CAMERA_Z_HEIGHT, 
-      SwerveConstants.CAMERA_ROLL, 
-      SwerveConstants.CAMERA_PITCH, 
+      Constants.Vision.CAMERA_Z_HEIGHT, 
+      Constants.Vision.CAMERA_ROLL, 
+      Constants.Vision.CAMERA_PITCH, 
       finalCameraYaw
     );
   }
