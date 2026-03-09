@@ -57,7 +57,6 @@ import frc.robot.subsystems.Intake.IntakeIOSim;
 import frc.robot.Robot;
 import frc.robot.utils.SysIDRoutines;
 
-
 import swervelib.math.SwerveMath;
 import swervelib.simulation.ironmaple.simulation.SimulatedArena;
 import swervelib.simulation.ironmaple.simulation.seasonspecific.rebuilt2026.Arena2026Rebuilt;
@@ -65,19 +64,18 @@ import swervelib.simulation.ironmaple.simulation.seasonspecific.rebuilt2026.Aren
 public class RobotContainer {
   // field relative val
   private static boolean fieldRelative = true;
-  // field relative supplier, its not just the boolean because it needs to update with the drive command
+  // field relative supplier, its not just the boolean because it needs to update
+  // with the drive command
   private static BooleanSupplier fieldRelativeSupp = () -> fieldRelative;
   // Robot Subsystems
-  //public for now because idk how else sysidroutines will use it
+  // public for now because idk how else sysidroutines will use it
   public final SwerveSubsystem m_driveBase;
   private final Intake m_intake;
   private final TurretAzimuth m_turretAzimuth;
   private final Indexer m_indexer;
   private final TurretShooter m_shooter;
-  
-  // private final SysIDRoutines m_routines;
-  
 
+  // private final SysIDRoutines m_routines;
 
   // Controllers
   public static final CommandXboxController m_driverController = new CommandXboxController(
@@ -95,30 +93,27 @@ public class RobotContainer {
 
   public RobotContainer() {
     if (RobotBase.isSimulation()) {
-        SimulatedArena.overrideInstance(new Arena2026Rebuilt());
+      SimulatedArena.overrideInstance(new Arena2026Rebuilt());
     }
 
-    
     m_driveBase = new SwerveSubsystem(new File(Filesystem.getDeployDirectory(), "swerve/"));
 
-    //m_routines = new SysIDRoutines(m_driveBase);
+    // m_routines = new SysIDRoutines(m_driveBase);
     autoChooser = new LoggedDashboardChooser<>("AutoChooser", AutoBuilder.buildAutoChooser());
 
     if (RobotBase.isSimulation()) {
-        
-        m_intake = new Intake(new IntakeIOSim(m_driveBase.getSimDrive()));
+
+      m_intake = new Intake(new IntakeIOSim(m_driveBase.getSimDrive()));
     } else {
-        m_intake = null;
+      m_intake = null;
     }
     // change when robot is built
     m_turretAzimuth = null;
-    //m_driveBase.setTurretAngleSupplier(() -> Rotation2d.fromDegrees(m_turretAzimuth.getCurrentAngle()));
+    // m_driveBase.setTurretAngleSupplier(() ->
+    // Rotation2d.fromDegrees(m_turretAzimuth.getCurrentAngle()));
     m_indexer = new Indexer();
-    //change when robot is built
+    // change when robot is built
     m_shooter = null;
-
-
-
 
     // auto = new Autos();
 
@@ -133,7 +128,6 @@ public class RobotContainer {
                   -MathUtil.applyDeadband(m_driverController.getLeftX(), OIConstants.kDriveDeadband)))
                   .times(SwerveConstants.kMaxSpeedMetersPerSecond);
 
-              
               boolean isFieldRelative = fieldRelativeSupp.getAsBoolean();
               if (isFieldRelative) {
                 var alliance = DriverStation.getAlliance();
@@ -148,13 +142,13 @@ public class RobotContainer {
                   isFieldRelative);
             },
             m_driveBase));
-    
+
     configureBindings();
     configureNamedCommands();
     SmartDashboard.putBoolean("TuningModeActive", false);
 
     // m_turretAzimuth.setDefaultCommand(
-    //   new TurretVisionAim(m_driveBase, m_turretAzimuth, m_shooter)
+    // new TurretVisionAim(m_driveBase, m_turretAzimuth, m_shooter)
     // );
   }
 
@@ -170,71 +164,76 @@ public class RobotContainer {
         new InstantCommand(() -> fieldRelative = !fieldRelative));
 
     m_driverController.a().onTrue(
-        new InstantCommand(() -> m_driveBase.zeroGyro(), m_driveBase).withName("Yaw zeroed"));
+        new InstantCommand(() -> m_driveBase.zeroGyroWithAlliance(), m_driveBase).withName("Yaw zeroed"));
 
     m_driverController.x().whileTrue(
         new RunCommand(() -> m_driveBase.defensiveXCommand(), m_driveBase).withName("Defense Position"));
 
     // m_driverController.rightTrigger().whileTrue(
-    //   m_intake.intakeCommand()
+    // m_intake.intakeCommand()
     // );
     // m_driverController.leftTrigger().whileTrue(
-    //   m_intake.ejectCommand()
+    // m_intake.ejectCommand()
     // );
 
-    m_driverController.rightBumper().whileTrue(
-       //new SequentialCommandGroup(
-      //   new InstantCommand(() -> m_indexer.rollerWarmup()),
-      //   new WaitCommand(0.5),
+    m_driverController.rightTrigger().whileTrue(
         m_indexer.runIndexer());
-     // );
-    
-    
+
+    m_driverController.leftTrigger().whileTrue(
+        m_intake.intakeCommand());
+    m_driverController.y().whileTrue(
+      m_intake.testExtend()
+    );
+    m_driverController.b().whileTrue(
+      m_intake.testRetract()
+    );
+
+
     // ==== OPERATOR BINDS ====
     // HOLD A to aim the limelight at your target
     //
     //
     // m_opController.a().whileTrue(
-    //   new VisionAim(m_driveBase, m_driverController));
+    // new VisionAim(m_driveBase, m_driverController));
 
     // m_driverController.rightTrigger().whileTrue(
-    //     new RunCommand(() -> m_shooter.setAiming()));
-    
+    // new RunCommand(() -> m_shooter.setAiming()));
+
     // ==== SYS ID BINDS (comment these out when not in use) ====
 
     // m_opController.y().whileTrue(
-    //   m_routines.sysIdAngleQuasi(Direction.kForward)
+    // m_routines.sysIdAngleQuasi(Direction.kForward)
     // );
     // m_opController.a().whileTrue(
-    //   m_routines.sysIdAngleQuasi(Direction.kReverse)
+    // m_routines.sysIdAngleQuasi(Direction.kReverse)
     // );
     // m_opController.b().whileTrue(
-    //   m_routines.sysIdAngleDynam(Direction.kForward)
+    // m_routines.sysIdAngleDynam(Direction.kForward)
     // );
     // m_opController.x().whileTrue(
-    //   m_routines.sysIdAngleDynam(Direction.kReverse)
+    // m_routines.sysIdAngleDynam(Direction.kReverse)
     // );
 
     // m_opController.povDown().whileTrue(
-    //   SysIDRoutines.sysIdDriveQuasi(Direction.kReverse)
+    // SysIDRoutines.sysIdDriveQuasi(Direction.kReverse)
     // );
     // m_opController.povUp().whileTrue(
-    //   SysIDRoutines.sysIdDriveQuasi(Direction.kForward)
+    // SysIDRoutines.sysIdDriveQuasi(Direction.kForward)
     // );
     // m_opController.povLeft().whileTrue(
-    //   SysIDRoutines.sysIdDriveDynam(Direction.kReverse)
+    // SysIDRoutines.sysIdDriveDynam(Direction.kReverse)
     // );
     // m_opController.povRight().whileTrue(
-    //   SysIDRoutines.sysIdDriveDynam(Direction.kForward)
+    // SysIDRoutines.sysIdDriveDynam(Direction.kForward)
     // );
 
   }
+
   public SwerveSubsystem getSwerveSubsystem() {
     return m_driveBase;
   }
 
   public void configureNamedCommands() {
-
 
   }
 

@@ -49,7 +49,7 @@ public final class Configs {
             hoodConfig
                     .idleMode(IdleMode.kBrake);
             azimuthConfig
-                    .idleMode(IdleMode.kBrake);
+                    .idleMode(IdleMode.kCoast);
 
             azimuthConfig.encoder
                     .positionConversionFactor((1.0 / TurretConstants.kTurretAngleConversionFactor) * 360.0);
@@ -59,13 +59,16 @@ public final class Configs {
     }
 
     public static final class IndexerConfigs {
-        public static final SparkFlexConfig indexerConfig = new SparkFlexConfig();
+        public static final SparkFlexConfig rotorConfig = new SparkFlexConfig();
         public static final SparkMaxConfig rollerConfig = new SparkMaxConfig();
         static {
-            indexerConfig
-                    .idleMode(IdleMode.kCoast);
+            rotorConfig
+                    .idleMode(IdleMode.kCoast)
+                    .smartCurrentLimit(40);
             rollerConfig
-                    .idleMode(IdleMode.kCoast);
+                    .idleMode(IdleMode.kCoast)
+                    .smartCurrentLimit(30);
+                    
             
         }
 

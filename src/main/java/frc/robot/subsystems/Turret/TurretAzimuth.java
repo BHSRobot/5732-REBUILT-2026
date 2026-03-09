@@ -62,5 +62,17 @@ public class TurretAzimuth extends SubsystemBase {
         m_turretClosedLoop.setSetpoint(angle, ControlType.kMAXMotionPositionControl);
     }
 
+
+    public boolean isAtTargetAngle() {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'isAtTargetAngle'");
+    }
+
+
+    public void stop() {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'stop'");
+    }
+
     
 }

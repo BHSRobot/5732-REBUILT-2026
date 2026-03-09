@@ -1,6 +1,8 @@
 package frc.robot.subsystems.Turret;
 
 import edu.wpi.first.wpilibj2.command.Command;
+import edu.wpi.first.wpilibj2.command.Commands;
+import edu.wpi.first.wpilibj2.command.SequentialCommandGroup;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import org.littletonrobotics.junction.Logger;
 
@@ -17,42 +19,57 @@ import frc.robot.utils.LoggedTunableNumber;
 import com.revrobotics.spark.SparkLowLevel.MotorType;
 import com.revrobotics.spark.SparkMax;
 import com.revrobotics.spark.SparkClosedLoopController;
+
 public class Indexer extends SubsystemBase {
-    private final SparkFlex m_indexerVortex;
-    private final RelativeEncoder m_indexerEncoder;
-    private final SparkMax m_rollerMotor;
-    private final RelativeEncoder m_rollerEncoder;
-    private final SparkClosedLoopController m_indexerClosedLoop;
-    private double m_currentRPM;
-    private double m_targetRPM;
-    public static final LoggedTunableNumber PIndexer = new LoggedTunableNumber("Indexer/kP");
-    public static final LoggedTunableNumber DIndexer = new LoggedTunableNumber("Indexer/kD");
+    private final SparkFlex m_RotorVortex;
+    private final RelativeEncoder m_RotorEncoder;
+    private final SparkMax m_rollersMotor;
+    private final RelativeEncoder m_rollersEncoder;
+    private final SparkClosedLoopController m_RotorClosedLoop;
+    private final SparkClosedLoopController m_rollersClosedLoop;
+    private double m_currentRotorRPM;
+    private double m_targetRotorRPM;
+    private double m_currentRollersRPM;
+    private double m_targetRollersRPM;
+    public static final LoggedTunableNumber PRotor = new LoggedTunableNumber("Rotor/kP");
+    public static final LoggedTunableNumber DRotor = new LoggedTunableNumber("Rotor/kD");
 
     public static final LoggedTunableNumber PRoller = new LoggedTunableNumber("Roller/kP");
     public static final LoggedTunableNumber DRoller = new LoggedTunableNumber("Roller/kD");
 
     public Indexer() {
-        
-        m_indexerVortex = new SparkFlex(MechConstants.kIndexerID, MotorType.kBrushless);
-        m_indexerVortex.configure(Configs.IndexerConfigs.indexerConfig, ResetMode.kNoResetSafeParameters, PersistMode.kPersistParameters);
-        m_indexerClosedLoop = m_indexerVortex.getClosedLoopController();
-        m_indexerEncoder = m_indexerVortex.getEncoder();
-        m_rollerMotor = new SparkMax(MechConstants.kIndexRollerID, MotorType.kBrushless);
-        m_rollerEncoder = m_rollerMotor.getEncoder();
-        m_rollerMotor.configure(Configs.IndexerConfigs.rollerConfig, ResetMode.kNoResetSafeParameters,PersistMode.kPersistParameters);
-        m_currentRPM = 0.0;
-        m_targetRPM = 0.0;
+
+        m_RotorVortex = new SparkFlex(MechConstants.kIndexerID, MotorType.kBrushless);
+        m_RotorVortex.configure(Configs.IndexerConfigs.rotorConfig, ResetMode.kNoResetSafeParameters,
+                PersistMode.kPersistParameters);
+        m_RotorClosedLoop = m_RotorVortex.getClosedLoopController();
+        m_RotorEncoder = m_RotorVortex.getEncoder();
+        m_rollersMotor = new SparkMax(MechConstants.kIndexRollerID, MotorType.kBrushless);
+        m_rollersEncoder = m_rollersMotor.getEncoder();
+        m_rollersClosedLoop = m_rollersMotor.getClosedLoopController();
+        m_rollersMotor.configure(Configs.IndexerConfigs.rollerConfig, ResetMode.kNoResetSafeParameters,
+                PersistMode.kPersistParameters);
+        m_currentRotorRPM = 0.0;
+        m_targetRotorRPM = 0.0;
+
+        m_currentRollersRPM = 0.0;
+        m_targetRollersRPM = 0.0;
 
     }
 
-    public void setIndexRPM(double rpm) {
-        m_indexerClosedLoop.setSetpoint(rpm, ControlType.kMAXMotionVelocityControl);
-        m_targetRPM = rpm;
+    public void setRotorRPM(double rpm) {
+        m_RotorClosedLoop.setSetpoint(rpm, ControlType.kMAXMotionVelocityControl);
+        m_targetRotorRPM = rpm;
+    }
+
+    public void setRollerRPM(double rpm) {
+        m_rollersClosedLoop.setSetpoint(rpm - m_currentRotorRPM, ControlType.kMAXMotionVelocityControl);
     }
 
     public enum IndexerState {
-        RUNNING, DISABLED
+        RUNNING, WARMUP, DISABLED
     }
+
     IndexerState indexState = IndexerState.DISABLED;
 
     public void setIndexerState(IndexerState state) {
@@ -60,58 +77,63 @@ public class Indexer extends SubsystemBase {
     }
 
     // test the indexer without a tuned pid for now
-    public void setIndexRawSpeed() {
-        m_indexerVortex.set(.25);
+    public void setIndexRawSpeed(double speed) {
+        m_RotorVortex.set(speed);
     }
 
-    public void rollerWarmup() {
-        m_rollerMotor.set(-.25);
+    public void setRollersRawSpeed(double speed) {
+        m_rollersMotor.set(speed);
     }
 
     public Command runIndexer() {
-        return this.runEnd(() -> setIndexerState(IndexerState.RUNNING),
-        () -> setIndexerState(IndexerState.DISABLED));
+        return new SequentialCommandGroup(
+                runOnce(() -> setIndexerState(IndexerState.WARMUP)),
+                new edu.wpi.first.wpilibj2.command.WaitCommand(0.5), // Adjust time as needed
+
+                runOnce(() -> setIndexerState(IndexerState.RUNNING)))
+                .finallyDo(() -> setIndexerState(IndexerState.DISABLED))
+                .withName("RunIndexerSequence");
     }
 
-    
-    public double getTargetRPM() {
-        return m_targetRPM;
+    public double getTargetRotorRPM() {
+        return m_targetRotorRPM;
     }
 
-    public double getCurrentRPM() {
-        return m_currentRPM;
+    public double getCurrentRotorRPM() {
+        return m_currentRotorRPM;
     }
 
+    public double getTargetRollersRPM() {
+        return m_targetRollersRPM;
+    }
 
-
-
-
-    
+    public double getCurrentRollersRPM() {
+        return m_currentRollersRPM;
+    }
 
     public void stop() {
-        m_indexerVortex.setVoltage(0);
-        m_rollerMotor.setVoltage(0);
+        m_RotorVortex.setVoltage(0.0);
+        m_rollersMotor.setVoltage(0.0);
     }
 
     @Override
     public void periodic() {
-        m_currentRPM = m_indexerEncoder.getVelocity();
+        m_currentRotorRPM = m_RotorEncoder.getVelocity();
+        m_currentRollersRPM = m_rollersEncoder.getVelocity();
         switch (indexState) {
             case DISABLED -> {
                 stop();
             }
-            case RUNNING -> {
-                //rollerWarmup();
-                setIndexRawSpeed();
+            case WARMUP -> {
+                setRollersRawSpeed(-.25);
+                setIndexRawSpeed(0);
             }
+            case RUNNING -> {
+                setRollersRawSpeed(-.25);
+                setIndexRawSpeed(.25);
+            }
+
         }
     }
-
-
-
-   
-
-    
-
 
 }

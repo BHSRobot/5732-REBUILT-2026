@@ -4,6 +4,7 @@ package frc.robot.utils;
 
 import frc.robot.subsystems.Swerve.SwerveConstants;
 import frc.robot.subsystems.Swerve.SwerveSubsystem;
+import frc.robot.subsystems.Turret.TurretShooter;
 
 import static edu.wpi.first.units.Units.Meters;
 import static edu.wpi.first.units.Units.MetersPerSecond;
@@ -39,6 +40,7 @@ import edu.wpi.first.wpilibj2.command.Commands;
 public class SysIDRoutines {
   private SwerveDrive m_swerveDrive;
   private SwerveSubsystem m_swerveSubsystem;
+  private TurretShooter m_shooter;
   
   private SysIdRoutine.Config angleConfig;
   public final SysIdRoutine angleSysIdRoutine;
@@ -49,9 +51,10 @@ public class SysIDRoutines {
   // modules in an array 
   SwerveModule[] modules = m_swerveDrive.getModules();
 
-  public SysIDRoutines(SwerveSubsystem drivetrain) {
+  public SysIDRoutines(SwerveSubsystem drivetrain, TurretShooter shooter) {
     m_swerveSubsystem = drivetrain;
     m_swerveDrive = m_swerveSubsystem.getSwerveDrive();
+    m_shooter = shooter;
     
     /**
      * Swerve Angular motor SysId Routine

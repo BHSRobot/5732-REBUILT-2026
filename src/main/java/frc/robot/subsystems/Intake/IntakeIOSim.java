@@ -54,11 +54,9 @@ public class IntakeIOSim implements IntakeIO {
         public void setIntakeRPM(double rpm) {
                 intakeAppliedVolts = intakeSimPID.calculate(motorSim.getAngularVelocityRPM(), rpm);
                 motorSim.setInputVoltage(intakeSimPID.calculate(motorSim.getAngularVelocityRPM(), rpm));
-                if (Math.abs(motorSim.getAngularVelocityRPM() - rpm) <= 5) {
+                
                         intakeSimulation.startIntake();
-                } else {
-                        intakeSimulation.stopIntake();
-                }
+                
 
         }
 

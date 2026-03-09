@@ -25,4 +25,17 @@ public interface IntakeIO {
 
     /** Run the extension to the angle required for full extension */
     public default void setExtended(boolean extended) {}
+
+
+
+    // raw motor speed methods (testing before pids are tuned and possibly using for comp if needed)
+
+    public default void testExtend() {}
+
+    public default void testRetract() {}
+
+    public default void testSetDisabled() {}
+
+
+    
 }

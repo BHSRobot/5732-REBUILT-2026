@@ -95,13 +95,17 @@ import com.ctre.phoenix.motorcontrol.NeutralMode;
 import com.ctre.phoenix6.SignalLogger;
 import com.ctre.phoenix6.configs.CurrentLimitsConfigs;
 import com.ctre.phoenix6.configs.MotorOutputConfigs;
+import com.ctre.phoenix6.configs.Pigeon2Configuration;
+import com.ctre.phoenix6.configs.Pigeon2Configurator;
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
 import com.ctre.phoenix6.configs.TalonFXConfigurator;
+import com.ctre.phoenix6.hardware.Pigeon2;
 import com.ctre.phoenix6.hardware.TalonFX;
 import com.ctre.phoenix6.signals.NeutralModeValue;
 import edu.wpi.first.math.kinematics.SwerveModuleState;
 
 import swervelib.SwerveModule;
+import swervelib.imu.SwerveIMU;
 
 import com.revrobotics.RelativeEncoder;
 import com.revrobotics.spark.SparkBase;
@@ -120,6 +124,8 @@ public class SwerveSubsystem extends SubsystemBase {
   private final SwerveDrive m_swerveDrive;
 
   private boolean m_sysIdActive = false;
+
+  private double m_lastTurretAngleDegrees = -999.0;
 
   public void setSysIdActive(boolean active) {
     m_sysIdActive = active;
@@ -185,7 +191,8 @@ public class SwerveSubsystem extends SubsystemBase {
     setupPathPlanner();
     RobotModeTriggers.autonomous().onTrue(Commands.runOnce(this::zeroGyroWithAlliance));
     configureCurrentLimits();
-
+    configurePigeon();
+    configureLimelight();
   }
 
   /**
@@ -202,16 +209,10 @@ public class SwerveSubsystem extends SubsystemBase {
         SwerveConstants.kMaxSpeedMetersPerSecond,
         new Pose2d(new Translation2d(Meter.of(2), Meter.of(0)),
             Rotation2d.fromDegrees(0)));
-    LimelightHelpers.setCameraPose_RobotSpace(
-      Vision.kchassislime, 
-      Constants.Vision.CHASSIS_CAMERA_FORWARD_OFFSET, 
-      0, 
-      Constants.Vision.CHASSIS_CAMERA_Z_HEIGHT, 
-      Constants.Vision.CHASSIS_CAMERA_ROLL, 
-      Constants.Vision.CHASSIS_CAMERA_PITCH, 
-      Constants.Vision.CHASSIS_CAMERA_YAW
-    );
+    
     configureCurrentLimits();
+    configurePigeon();
+    configureLimelight();
 
   }
 
@@ -312,6 +313,29 @@ public class SwerveSubsystem extends SubsystemBase {
 
       }
     }
+  }
+
+  public void configurePigeon() {
+    Pigeon2 pigeon = (Pigeon2) m_swerveDrive.getGyro().getIMU();
+    Pigeon2Configuration pigeonConfig = new Pigeon2Configuration();
+    pigeonConfig.MountPose.MountPoseYaw = 90.0;
+    pigeonConfig.MountPose.MountPosePitch = 0.0;
+    pigeonConfig.MountPose.MountPoseRoll = 0.0;
+    pigeon.getConfigurator().apply(pigeonConfig);
+    
+
+  }
+
+  public void configureLimelight() {
+    LimelightHelpers.setCameraPose_RobotSpace(
+      Vision.kchassislime, 
+      Constants.Vision.CHASSIS_CAMERA_FORWARD_OFFSET, 
+      Constants.Vision.CHASSIS_CAMERA_SIDE_OFFSET, 
+      Constants.Vision.CHASSIS_CAMERA_Z_HEIGHT, 
+      Constants.Vision.CHASSIS_CAMERA_ROLL, 
+      Constants.Vision.CHASSIS_CAMERA_PITCH, 
+      Constants.Vision.CHASSIS_CAMERA_YAW
+    );
   }
 
   @Override
@@ -694,60 +718,67 @@ public class SwerveSubsystem extends SubsystemBase {
    * Call this periodically before fetching the MegaTag2 pose.
    * * @param turretAngle The current Rotation2d of the turret relative to the chassis forward.
    */
+
   public void updateTurretCameraExtrinsics(Rotation2d turretAngle) {
+    // Only send the update if the turret moved more than 1 degree
+    if (Math.abs(turretAngle.getDegrees() - m_lastTurretAngleDegrees) < 1.0) {
+        return; 
+    }
     
-    // Assuming the camera faces perfectly forward on the turret, it sits at (Radius, 0)
+    m_lastTurretAngleDegrees = turretAngle.getDegrees();
+
     Translation2d cameraRelativeToTurret = new Translation2d(Constants.Vision.CAMERA_RADIUS_FROM_TURRET, 0.0);
-
-    
     Translation2d rotatedCameraOffset = cameraRelativeToTurret.rotateBy(turretAngle);
-
-   
+    
     double finalCameraForward = Constants.Vision.TURRET_CENTER_X_OFFSET + rotatedCameraOffset.getX();
     double finalCameraSide = Constants.Vision.TURRET_CENTER_Y_OFFSET + rotatedCameraOffset.getY();
-    
-    
     double finalCameraYaw = turretAngle.getDegrees();
 
-    
     LimelightHelpers.setCameraPose_RobotSpace(
       Vision.kturretlime, 
-      finalCameraForward, 
-      finalCameraSide, 
-      Constants.Vision.CAMERA_Z_HEIGHT, 
-      Constants.Vision.CAMERA_ROLL, 
-      Constants.Vision.CAMERA_PITCH, 
-      finalCameraYaw
+      finalCameraForward, finalCameraSide, Constants.Vision.CAMERA_Z_HEIGHT, 
+      Constants.Vision.CAMERA_ROLL, Constants.Vision.CAMERA_PITCH, finalCameraYaw
     );
-  }
+}
 
   /**
    * Helper method to process a single Limelight's data.
    */
   private void processLimelight(String cameraName, double yaw, double velocity) {
-    // Update orientation for MegaTag2
+    
+    if (cameraName.equals(Vision.kturretlime)) {
+        updateTurretCameraExtrinsics(m_turretAngleSupplier.get());
+    }
+
+    
     LimelightHelpers.SetRobotOrientation(cameraName, yaw, velocity, 0.0, 0.0, 0.0, 0.0);
-    updateTurretCameraExtrinsics(m_turretAngleSupplier.get());
-    // If there is no target, exit early :)
-    if (!LimelightHelpers.getTV(cameraName))
-      return;
+    
+    
+    if (!LimelightHelpers.getTV(cameraName)) return;
 
     LimelightHelpers.PoseEstimate estimate = LimelightHelpers.getBotPoseEstimate_wpiBlue_MegaTag2(cameraName);
 
-    // FILTERS: Max distance 4.5m AND filter high ambiguity on single-tag detections
-    boolean isFar = estimate.avgTagDist > 5;
-    boolean isAmbiguous = estimate.tagCount == 1 && estimate.rawFiducials[0].ambiguity > 0.6;
+    
+    if (estimate == null || estimate.tagCount == 0) return; // extra safety
+
+    boolean isFar = estimate.avgTagDist > 5.0;
+    boolean isAmbiguous = false;
+    
+    
+    if (estimate.tagCount == 1 && estimate.rawFiducials != null && estimate.rawFiducials.length > 0) {
+        isAmbiguous = estimate.rawFiducials[0].ambiguity > 0.6;
+    }
 
     if (!isFar && !isAmbiguous) {
-      // trust calculation
+      
       double stdDev = 0.01 * Math.pow(estimate.avgTagDist, 2);
-
       m_swerveDrive.addVisionMeasurement(
           estimate.pose,
           estimate.timestampSeconds,
-          VecBuilder.fill(stdDev, stdDev, 9999999));
+          VecBuilder.fill(stdDev, stdDev, 9999999) 
+      );
     }
-  }
+}
 
   /**
    * Gets the current pose (position and rotation) of the robot, as reported by

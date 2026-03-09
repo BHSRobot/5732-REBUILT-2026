@@ -106,6 +106,8 @@ public class TurretShooter extends SubsystemBase {
             setFlywheelRPM(TurretConstants.kidleShootingRPM);
             setTargetHoodAngle(TurretConstants.kidleShootingAngle);
         }
+        
+        
 
     }
 
@@ -164,5 +166,11 @@ public class TurretShooter extends SubsystemBase {
         m_targetVelocity = rpm;
         m_shooterClosedLoop.setSetpoint(m_targetVelocity, ControlType.kMAXMotionVelocityControl);
     }
+
+    public boolean isAtTargetRPM() {
+        return Math.abs(m_currentVelocity - m_targetVelocity) < 2;
+    }
+
+    
 
 }

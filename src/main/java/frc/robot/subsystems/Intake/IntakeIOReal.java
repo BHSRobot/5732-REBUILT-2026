@@ -65,5 +65,19 @@ public class IntakeIOReal implements IntakeIO {
         
 
     }
+
+    @Override
+    public void testExtend() {
+        intakeExtensionMotor.set(.15);
+    }
+
+    @Override
+    public void testRetract() {
+        intakeExtensionMotor.set(-.15);
+    }
+    @Override
+    public void testSetDisabled() {
+        intakeExtensionMotor.setVoltage(0);
+    }
     
 }
