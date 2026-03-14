@@ -197,7 +197,7 @@ public class TurretShooter extends SubsystemBase {
 
     // dumb way for first comp
     public void justShootBruh() {
-        setFlywheelVoltage(12);
+        m_shooterFlexLead.set(1);
         
     }
 
