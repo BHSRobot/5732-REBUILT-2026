@@ -42,7 +42,7 @@ public class Intake extends SubsystemBase {
             }
             case INTAKING -> {
                 // CHANGE THIS
-                io.setIntakeVoltage(0);
+                io.setIntakeVoltage(12);
                 //io.setIntakeRPM(3600);
                 io.setExtended(true);
                 

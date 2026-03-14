@@ -44,10 +44,11 @@ public final class Configs {
                                 .positionWrappingMaxInput(360)
                                 .positionWrappingMinInput(-360)
                                 .outputRange(-1, 1)
-                                .feedbackSensor(FeedbackSensor.kAbsoluteEncoder);
+                                .feedbackSensor(FeedbackSensor.kAbsoluteEncoder)
+                                .pid(0.006, 0, 0);
 
                         intakeExtendConfig.encoder
-                                .inverted(true)
+                                .inverted(false)
                                 .positionConversionFactor(360);
                                 
 
