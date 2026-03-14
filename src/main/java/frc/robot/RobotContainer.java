@@ -107,15 +107,15 @@ public class RobotContainer {
 
       m_intake = new Intake(new IntakeIOSim(m_driveBase.getSimDrive()));
     } else {
-      m_intake = new Intake(new IntakeIOReal());
+      m_intake = null;
     }
     // change when robot is built
     m_turretAzimuth = null;
     // m_driveBase.setTurretAngleSupplier(() ->
     // Rotation2d.fromDegrees(m_turretAzimuth.getCurrentAngle()));
-    m_indexer = new Indexer();
+    m_indexer = null;
     // change when robot is built
-    m_shooter = new TurretShooter();
+    m_shooter = null;
 
     auto = new Autos();
 
@@ -158,8 +158,8 @@ public class RobotContainer {
     m_driverController.a().onTrue(
         new InstantCommand(() -> m_driveBase.zeroGyro(), m_driveBase).withName("Yaw zeroed"));
 
-    m_driverController.x().whileTrue(
-        new RunCommand(() -> m_driveBase.defensiveXCommand(), m_driveBase).withName("Defense Position"));
+    // m_driverController.x().whileTrue(
+    //     new RunCommand(() -> m_driveBase.defensiveXCommand(), m_driveBase).withName("Defense Position"));
 
     // m_driverController.rightTrigger().whileTrue(
     // m_intake.intakeCommand()
@@ -168,10 +168,19 @@ public class RobotContainer {
     // m_intake.ejectCommand()
     // );
 
-    m_driverController.rightBumper().whileTrue(
-        m_indexer.runIndexer());
-    m_driverController.leftBumper().whileTrue(
-        m_intake.intakeCommand());
+    // m_driverController.rightBumper().whileTrue(
+    //     m_indexer.runIndexer());
+    // m_driverController.rightTrigger().whileTrue(
+    //     m_indexer.runIndexerReverse());
+    // m_driverController.leftBumper().whileTrue(
+    //     m_intake.intakeCommand());
+    // m_driverController.leftTrigger().whileTrue(
+    //     new RunCommand(
+    //         () -> {
+    //           m_shooter.justShootBruh(); // Rev the motors
+    //         },
+    //         m_shooter).finallyDo((interrupted) -> m_shooter.stop()) // Runs automatically when trigger is released
+    // );
 
     // m_driverController.rightTrigger().whileTrue(
     // new ChassisVisionAim(m_driveBase, m_shooter, m_indexer, () ->
@@ -179,17 +188,11 @@ public class RobotContainer {
     // () -> getAllianceBasedTranslation().getY()));
 
     // m_driverController.y().whileTrue(
-    //     m_intake.testExtend());
+    // m_intake.testExtend());
     // m_driverController.b().whileTrue(
-    //     m_intake.testRetract());
+    // m_intake.testRetract());
 
-    m_driverController.rightTrigger().whileTrue(
-        new RunCommand(
-            () -> {
-              m_shooter.justShootBruh(); // Rev the motors
-            },
-            m_shooter).finallyDo((interrupted) -> m_shooter.stop()) // Runs automatically when trigger is released
-    );
+    
 
     // ==== OPERATOR BINDS ====
     // HOLD A to aim the limelight at your target
@@ -242,8 +245,8 @@ public class RobotContainer {
     // () -> getAllianceBasedTranslation().getX(), () ->
     // getAllianceBasedTranslation().getY()));
 
-    NamedCommands.registerCommand("RunIndexer", m_indexer.runIndexer());
-    NamedCommands.registerCommand("RunIntake", m_intake.intakeCommand());
+    // NamedCommands.registerCommand("RunIndexer", m_indexer.runIndexer());
+    // NamedCommands.registerCommand("RunIntake", m_intake.intakeCommand());
 
   }
 

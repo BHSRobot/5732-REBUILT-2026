@@ -67,7 +67,7 @@ public class Indexer extends SubsystemBase {
     }
 
     public enum IndexerState {
-        RUNNING, WARMUP, DISABLED
+        RUNNING, WARMUP, DISABLED, REVERSE
     }
 
     IndexerState indexState = IndexerState.DISABLED;
@@ -85,7 +85,7 @@ public class Indexer extends SubsystemBase {
         m_rollersMotor.set(speed);
     }
 
-    public Command runIndexer() {
+    public Command   runIndexer() {
         return new SequentialCommandGroup(
                 runOnce(() -> setIndexerState(IndexerState.WARMUP)),
                 new edu.wpi.first.wpilibj2.command.WaitCommand(0.5), // Adjust time as needed
@@ -94,6 +94,14 @@ public class Indexer extends SubsystemBase {
                 .finallyDo(() -> setIndexerState(IndexerState.DISABLED))
                 .withName("RunIndexerSequence");
     }
+
+    public Command   runIndexerReverse() {
+        return new SequentialCommandGroup(
+                run(() -> setIndexerState(IndexerState.REVERSE)))
+                .finallyDo(() -> setIndexerState(IndexerState.DISABLED))
+                .withName("RunIndexerReverseSequence");
+    }
+
 
     public double getTargetRotorRPM() {
         return m_targetRotorRPM;
@@ -131,6 +139,10 @@ public class Indexer extends SubsystemBase {
             case RUNNING -> {
                 setRollersRawSpeed(1);
                 setIndexRawSpeed(.35);
+            }
+            case REVERSE -> {
+                setRollersRawSpeed(-.2);
+                setIndexRawSpeed(-.1);
             }
 
         }
