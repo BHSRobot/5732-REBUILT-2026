@@ -53,7 +53,7 @@ public class TurretShooter extends SubsystemBase {
     private final RelativeEncoder m_hoodEncoder;
     private final SparkClosedLoopController m_turretHoodClosedLoop;
     private boolean isTuning;
-    private boolean sysidActive = true;
+    private boolean sysidActive = false;
 
     public static final LoggedTunableNumber PTurretHood = new LoggedTunableNumber("TurretHood/kP");
     public static final LoggedTunableNumber DTurretHood = new LoggedTunableNumber("TurretHood/kD");
@@ -117,9 +117,7 @@ public class TurretShooter extends SubsystemBase {
             setFlywheelRPM(0);
             setTargetHoodAngle(15);
         }
-        if (sysidActive) {
-            prepShooterMotors();
-        }
+        
 
     }
 
@@ -200,10 +198,8 @@ public class TurretShooter extends SubsystemBase {
 
     // dumb way for first comp
     public void justShootBruh() {
-        if (!isTuning && m_currentState == ShooterState.AIMING) {
-            
-            setFlywheelVoltage(12);
-        }
+        setFlywheelVoltage(12);
+        
     }
 
     /**

@@ -115,7 +115,7 @@ public class RobotContainer {
     // Rotation2d.fromDegrees(m_turretAzimuth.getCurrentAngle()));
     m_indexer = new Indexer();
     // change when robot is built
-    m_shooter = null;
+    m_shooter = new TurretShooter();
 
     auto = new Autos();
 
@@ -183,9 +183,13 @@ public class RobotContainer {
     m_driverController.b().whileTrue(
         m_intake.testRetract());
 
-    // m_driverController.rightTrigger().whileTrue(
-    //     new SequentialCommandGroup(
-    //         new RunCommand(() -> m_shooter.justShootBruh()).andThen(() -> m_shooter.stop())));
+    m_driverController.rightTrigger().whileTrue(
+        new RunCommand(
+            () -> {
+              m_shooter.justShootBruh(); // Rev the motors
+            },
+            m_shooter).finallyDo((interrupted) -> m_shooter.stop()) // Runs automatically when trigger is released
+    );
 
     // ==== OPERATOR BINDS ====
     // HOLD A to aim the limelight at your target
