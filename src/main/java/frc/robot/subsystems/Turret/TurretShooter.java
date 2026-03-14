@@ -198,6 +198,7 @@ public class TurretShooter extends SubsystemBase {
     // dumb way for first comp
     public void justShootBruh() {
         m_shooterFlexLead.set(1);
+        m_shooterFlexFollow.set(-1);
         
     }
 
