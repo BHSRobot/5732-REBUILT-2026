@@ -129,7 +129,7 @@ public class RobotContainer {
               Translation2d translation = getAllianceBasedTranslation();
               m_driveBase.drive(
                   translation,
-                  -Math.pow(MathUtil.applyDeadband(m_driverController.getRightX(), OIConstants.kDriveDeadband), 3)
+                  Math.pow(MathUtil.applyDeadband(m_driverController.getRightX(), OIConstants.kDriveDeadband), 3)
                       * SwerveConstants.kMaxAngularSpeed,
                   isFieldRelative);
             },
