@@ -24,11 +24,11 @@ public class ChassisVisionAim extends Command {
     private final TurretShooter m_turretShooter;
     private final Indexer m_index;
     
-    // 1. Store the joystick suppliers
+    
     private final DoubleSupplier m_translationX;
     private final DoubleSupplier m_translationY;
     
-    // 2. Add a PID Controller to calculate our rotation speed
+    
     private final PIDController m_headingController;
 
     public ChassisVisionAim(SwerveSubsystem drive, TurretShooter turretshoot, Indexer indexer,
@@ -105,18 +105,18 @@ public void execute() {
         translation = translation.rotateBy(Rotation2d.fromDegrees(180));
     }
 
-    // --- 4. ROTATION LOGIC (PID Heading Lock) ---
+    
     double omega = m_headingController.calculate(
         currentPose.getRotation().getRadians(), 
         fieldRelativeAngleToTarget.getRadians()
     );
 
-    // --- 5. DRIVE & SHOOT ---
+    
     // Use 'true' for fieldRelative because we handled alliance flipping manually above
     m_driveSubsystem.drive(translation, omega, true);
 
-    m_turretShooter.prepareToShoot(virtualDistance);
-
+    //m_turretShooter.prepareToShoot(virtualDistance);
+    m_turretShooter.justShootBruh(virtualDistance);
     
     boolean isChassisAtAngle = Math.abs(currentPose.getRotation().minus(fieldRelativeAngleToTarget).getRadians()) < Math.toRadians(2.0);
     boolean isShooterReady = m_turretShooter.isAtTargetRPM();
@@ -132,7 +132,7 @@ public void execute() {
     public void end(boolean interrupted) {
         // when you let go of the button stop everything.
         m_index.setIndexerState(IndexerState.DISABLED);
-        m_turretShooter.setIdle();
+        m_turretShooter.stop();
         
         // Stop the robot from drifting when the command ends
         m_driveSubsystem.drive(new Translation2d(0, 0), 0, true);

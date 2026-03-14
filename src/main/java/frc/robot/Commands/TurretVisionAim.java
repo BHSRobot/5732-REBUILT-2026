@@ -109,7 +109,7 @@ public class TurretVisionAim extends Command {
         m_indexer.setIndexerState(IndexerState.DISABLED);
         
         
-        m_turretShooter.setIdle(); 
+        m_turretShooter.stop(); 
         
     }
 

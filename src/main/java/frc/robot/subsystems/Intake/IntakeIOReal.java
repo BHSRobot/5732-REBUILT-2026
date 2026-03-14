@@ -57,10 +57,10 @@ public class IntakeIOReal implements IntakeIO {
     @Override 
     public void setExtended(boolean extended) {
         if (extended) {
-          intakeExtendClosedLoop.setSetpoint(IntakeConstants.kFullExtensionPosition, ControlType.kMAXMotionPositionControl);  
+          intakeExtendClosedLoop.setSetpoint(IntakeConstants.kFullExtensionPosition, ControlType.kPosition);  
         }
         else {
-            intakeExtendClosedLoop.setSetpoint(0, ControlType.kMAXMotionPositionControl);  
+            intakeExtendClosedLoop.setSetpoint(IntakeConstants.kFullRetractionPosition, ControlType.kPosition);  
         }
         
 

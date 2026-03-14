@@ -6,6 +6,7 @@ package frc.robot;
 
 import java.io.File;
 import java.util.function.BooleanSupplier;
+import java.util.function.DoubleSupplier;
 
 import org.littletonrobotics.junction.networktables.LoggedDashboardChooser;
 import org.w3c.dom.html.HTMLHeadingElement;
@@ -37,7 +38,8 @@ import edu.wpi.first.math.MathUtil;
 
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
-
+import edu.wpi.first.math.kinematics.ChassisSpeeds;
+import frc.robot.Commands.Autos;
 import frc.robot.Commands.ChassisVisionAim;
 import frc.robot.Commands.TurretVisionAim;
 import frc.robot.subsystems.Swerve.SwerveConstants;
@@ -89,7 +91,7 @@ public class RobotContainer {
 
   private final LoggedDashboardChooser<Command> autoChooser;
 
-  // private Autos auto;
+  private Autos auto;
 
   public RobotContainer() {
     if (RobotBase.isSimulation()) {
@@ -115,7 +117,7 @@ public class RobotContainer {
     // change when robot is built
     m_shooter = null;
 
-    // auto = new Autos();
+    auto = new Autos();
 
     // uses the low level drive command as part of yagsl
     // controller outputs are flipped and applied to angular and translational
@@ -123,18 +125,8 @@ public class RobotContainer {
     m_driveBase.setDefaultCommand(
         new RunCommand(
             () -> {
-              Translation2d translation = SwerveMath.cubeTranslation(new Translation2d(
-                  -MathUtil.applyDeadband(m_driverController.getLeftY(), OIConstants.kDriveDeadband),
-                  -MathUtil.applyDeadband(m_driverController.getLeftX(), OIConstants.kDriveDeadband)))
-                  .times(SwerveConstants.kMaxSpeedMetersPerSecond);
-
               boolean isFieldRelative = fieldRelativeSupp.getAsBoolean();
-              if (isFieldRelative) {
-                var alliance = DriverStation.getAlliance();
-                if (alliance.isPresent() && alliance.get() == DriverStation.Alliance.Red) {
-                  translation = translation.rotateBy(Rotation2d.fromDegrees(180));
-                }
-              }
+              Translation2d translation = getAllianceBasedTranslation();
               m_driveBase.drive(
                   translation,
                   -Math.pow(MathUtil.applyDeadband(m_driverController.getRightX(), OIConstants.kDriveDeadband), 3)
@@ -159,7 +151,6 @@ public class RobotContainer {
     // PRESS A to zero the gyro to your current heading
     // HOLD X to lock robot in defensive stance
 
-
     // creates a trigger for quick field/robot relative control switching
     new Trigger(m_driverController.povUp()).onTrue(
         new InstantCommand(() -> fieldRelative = !fieldRelative));
@@ -177,21 +168,20 @@ public class RobotContainer {
     // m_intake.ejectCommand()
     // );
 
-    m_driverController.rightTrigger().whileTrue(
+    m_driverController.rightBumper().whileTrue(
         m_indexer.runIndexer());
 
     m_driverController.leftTrigger().whileTrue(
         m_intake.intakeCommand());
 
+    m_driverController.rightTrigger().whileTrue(
+        new ChassisVisionAim(m_driveBase, m_shooter, m_indexer, () -> getAllianceBasedTranslation().getX(),
+            () -> getAllianceBasedTranslation().getY()));
+
     m_driverController.y().whileTrue(
-      m_intake.testExtend()
-    );
+        m_intake.testExtend());
     m_driverController.b().whileTrue(
-      m_intake.testRetract()
-    );
-
-    
-
+        m_intake.testRetract());
 
     // ==== OPERATOR BINDS ====
     // HOLD A to aim the limelight at your target
@@ -239,34 +229,39 @@ public class RobotContainer {
 
   public void configureNamedCommands() {
 
-    NamedCommands.registerCommand("aimchassisandshoot", new ChassisVisionAim(m_driveBase, m_shooter, m_indexer, whatSideAmIOn().getMeasureX(), whatSideAmIOn().getY()));
+    // NamedCommands.registerCommand("aimChassisAndShoot", new
+    // ChassisVisionAim(m_driveBase, m_shooter, m_indexer,
+    // () -> getAllianceBasedTranslation().getX(), () ->
+    // getAllianceBasedTranslation().getY()));
+
+    NamedCommands.registerCommand("RunIndexer", m_indexer.runIndexer());
+    NamedCommands.registerCommand("RunIntake", m_intake.intakeCommand());
 
   }
 
-  public Translation2d whatSideAmIOn() {
+  private Translation2d getAllianceBasedTranslation() {
     Translation2d translation = SwerveMath.cubeTranslation(new Translation2d(
-                  -MathUtil.applyDeadband(m_driverController.getLeftY(), OIConstants.kDriveDeadband),
-                  -MathUtil.applyDeadband(m_driverController.getLeftX(), OIConstants.kDriveDeadband)))
-                  .times(SwerveConstants.kMaxSpeedMetersPerSecond);
+        -MathUtil.applyDeadband(m_driverController.getLeftY(), OIConstants.kDriveDeadband),
+        -MathUtil.applyDeadband(m_driverController.getLeftX(), OIConstants.kDriveDeadband)))
+        .times(SwerveConstants.kMaxSpeedMetersPerSecond);
 
-              boolean isFieldRelative = fieldRelativeSupp.getAsBoolean();
-              if (isFieldRelative) {
-                var alliance = DriverStation.getAlliance();
-                if (alliance.isPresent() && alliance.get() == DriverStation.Alliance.Red) {
-                  translation = translation.rotateBy(Rotation2d.fromDegrees(180));
-                }
-              }
+    boolean isFieldRelative = fieldRelativeSupp.getAsBoolean();
+    if (isFieldRelative) {
+      var alliance = DriverStation.getAlliance();
+      if (alliance.isPresent() && alliance.get() == DriverStation.Alliance.Red) {
+        translation = translation.rotateBy(Rotation2d.fromDegrees(180));
+      }
+    }
 
     return translation;
 
-      
   }
 
   public Command getAutonomousCommand() {
 
     try {
       // Load the path you want to follow using its name in the GUI
-      PathPlannerPath path = PathPlannerPath.fromPathFile("New Path");
+      PathPlannerPath path = PathPlannerPath.fromPathFile("Rush");
 
       // Create a path following command using AutoBuilder. This will also trigger
       // event markers.
