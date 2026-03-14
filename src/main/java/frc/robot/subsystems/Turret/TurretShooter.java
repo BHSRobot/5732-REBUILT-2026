@@ -113,7 +113,8 @@ public class TurretShooter extends SubsystemBase {
         m_currentVelocity = m_shooterEncoder.getVelocity();
 
         if (m_currentState == ShooterState.DISABLED) {
-            setFlywheelRPM(0);
+            m_shooterFlexFollow.set(0);
+            m_shooterFlexLead.set(0);
             setTargetHoodAngle(15);
         }
         
