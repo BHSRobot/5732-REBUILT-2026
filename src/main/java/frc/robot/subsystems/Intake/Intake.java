@@ -37,35 +37,35 @@ public class Intake extends SubsystemBase {
             case EJECTING -> {
                 io.setIntakeVoltage(-12);
                 //io.setIntakeRPM(-3600);
-                io.setExtended(true);
+                //io.setExtended(true);
                 
             }
             case INTAKING -> {
-                // CHANGE THIS
+                
                 io.setIntakeVoltage(12);
                 //io.setIntakeRPM(3600);
-                io.setExtended(true);
+                //io.setExtended(true);
                 
             }
         }
 
-        // switch (extensionState) {
-        //     case DISABLED -> {
-        //         io.testSetDisabled();
+        switch (extensionState) {
+            case DISABLED -> {
+                io.testSetDisabled();
                 
                 
-        //     }
-        //     case EXTENDING -> {
-        //         io.testExtend();
+            }
+            case EXTENDING -> {
+                io.testExtend();
                 
                 
-        //     }
-        //     case RETRACTING -> {
-        //         io.testRetract();
+            }
+            case RETRACTING -> {
+                io.testRetract();
                 
                 
-        //     }
-        // }
+            }
+        }
     }
 
     public void setIntakeState(IntakeState state) {

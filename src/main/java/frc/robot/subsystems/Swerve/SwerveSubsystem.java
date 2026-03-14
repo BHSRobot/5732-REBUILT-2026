@@ -318,7 +318,7 @@ public class SwerveSubsystem extends SubsystemBase {
   public void configurePigeon() {
     Pigeon2 pigeon = (Pigeon2) m_swerveDrive.getGyro().getIMU();
     Pigeon2Configuration pigeonConfig = new Pigeon2Configuration();
-    pigeonConfig.MountPose.MountPoseYaw = 0.0;
+    pigeonConfig.MountPose.MountPoseYaw = -90.0;
     pigeonConfig.MountPose.MountPosePitch = 0.0;
     pigeonConfig.MountPose.MountPoseRoll = 0.0;
     pigeon.getConfigurator().apply(pigeonConfig);

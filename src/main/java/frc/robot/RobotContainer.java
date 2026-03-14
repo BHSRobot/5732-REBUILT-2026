@@ -156,7 +156,7 @@ public class RobotContainer {
         new InstantCommand(() -> fieldRelative = !fieldRelative));
 
     m_driverController.a().onTrue(
-        new InstantCommand(() -> m_driveBase.zeroGyroWithAlliance(), m_driveBase).withName("Yaw zeroed"));
+        new InstantCommand(() -> m_driveBase.zeroGyro(), m_driveBase).withName("Yaw zeroed"));
 
     m_driverController.x().whileTrue(
         new RunCommand(() -> m_driveBase.defensiveXCommand(), m_driveBase).withName("Defense Position"));
@@ -170,10 +170,10 @@ public class RobotContainer {
 
     m_driverController.rightBumper().whileTrue(
         m_indexer.runIndexer());
-
-    m_driverController.leftTrigger().whileTrue(
+    m_driverController.leftBumper().whileTrue(
         m_intake.intakeCommand());
 
+    
     //m_driverController.rightTrigger().whileTrue(
     //    new ChassisVisionAim(m_driveBase, m_shooter, m_indexer, () -> getAllianceBasedTranslation().getX(),
     //        () -> getAllianceBasedTranslation().getY()));

@@ -48,7 +48,6 @@ public final class Configs {
                                 .pid(0.006, 0, 0);
 
                         intakeExtendConfig.encoder
-                                .inverted(false)
                                 .positionConversionFactor(360);
                                 
 
