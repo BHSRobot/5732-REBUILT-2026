@@ -19,8 +19,8 @@ public class Intake extends SubsystemBase {
     public enum IntakeExtensionState { EXTENDING, RETRACTING, DISABLED }
     private IntakeState intakeState = IntakeState.DISABLED;
     private IntakeExtensionState extensionState = IntakeExtensionState.DISABLED;
-    public static final LoggedTunableNumber PIntakeExtension = new LoggedTunableNumber("Tuning/IntakeExtension/kP");
-    public static final LoggedTunableNumber DIntakeExtension = new LoggedTunableNumber("Tuning/IntakeExtension/kD");
+    public static final LoggedTunableNumber PIntakeExtension = new LoggedTunableNumber("IntakeExtension/kP");
+    public static final LoggedTunableNumber DIntakeExtension = new LoggedTunableNumber("IntakeExtension/kD");
     
     public Intake(IntakeIO io) {
         this.io = io;
@@ -41,15 +41,15 @@ public class Intake extends SubsystemBase {
             }
 
             case EJECTING -> {
-                io.setIntakeVoltage(-12);
-                //io.setIntakeRPM(-3600);
+                io.setIntakeVoltage(-9);
+                
                 //io.setExtended(true);
                 
             }
             case INTAKING -> {
                 
-                io.setIntakeVoltage(12);
-                //io.setIntakeRPM(3600);
+                io.setIntakeVoltage(9);
+                
                 //io.setExtended(true);
                 
             }

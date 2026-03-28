@@ -35,11 +35,11 @@ public class Indexer extends SubsystemBase {
     private double m_targetRotorRPM;
     private double m_currentRollersRPM;
     private double m_targetRollersRPM;
-    public static final LoggedTunableNumber PRotor = new LoggedTunableNumber("Tuning/Rotor/kP");
-    public static final LoggedTunableNumber DRotor = new LoggedTunableNumber("Tuning/Rotor/kD");
+    public static final LoggedTunableNumber PRotor = new LoggedTunableNumber("Rotor/kP");
+    public static final LoggedTunableNumber DRotor = new LoggedTunableNumber("Rotor/kD");
 
-    public static final LoggedTunableNumber PRollers = new LoggedTunableNumber("Tuning/Rollers/kP");
-    public static final LoggedTunableNumber DRollers = new LoggedTunableNumber("Tuning/Rollers/kD");
+    public static final LoggedTunableNumber PRollers = new LoggedTunableNumber("Rollers/kP");
+    public static final LoggedTunableNumber DRollers = new LoggedTunableNumber("Rollers/kD");
 
     public Indexer() {
 
@@ -167,8 +167,8 @@ public class Indexer extends SubsystemBase {
                 setIndexRawSpeed(.35);
             }
             case REVERSE -> {
-                setRollersRawSpeed(-.2);
-                setIndexRawSpeed(-.1);
+                setRollersRawSpeed(-.5);
+                setIndexRawSpeed(-.2);
             }
 
         }

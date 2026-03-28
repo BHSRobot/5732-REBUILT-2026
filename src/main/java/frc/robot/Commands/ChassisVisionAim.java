@@ -45,7 +45,7 @@ public class ChassisVisionAim extends Command {
         // tell the PID controller that -180 degrees and 180 degrees are the same thing
         m_headingController.enableContinuousInput(-Math.PI, Math.PI);
 
-        addRequirements(m_driveSubsystem, m_turretShooter, m_index);
+        //addRequirements(m_driveSubsystem, m_turretShooter, m_index);
         withName("aimchassisandshoot");
     }
 

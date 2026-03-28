@@ -88,7 +88,7 @@ public class Hopper extends SubsystemBase {
 
     // returns if its fully extended
     public boolean isExtended() {
-        return Math.abs(m_currentHeight - HopperConstants.kHoppFullExtPos) < 0.5;
+        return m_hoopClosedLoop.isAtSetpoint();
     }
 
 }

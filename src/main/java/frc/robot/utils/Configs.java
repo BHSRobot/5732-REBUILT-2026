@@ -23,7 +23,7 @@ public final class Configs {
                                         .idleMode(IdleMode.kBrake);
                         hopperConfig.encoder
                                         .positionConversionFactor(
-                                                        (1.0 / HopperConstants.kHopperExtConversionFactor) * 360.0);
+                                                         360.0);
 
                 }
 
@@ -34,29 +34,18 @@ public final class Configs {
                 public static final SparkMaxConfig intakeExtendConfig = new SparkMaxConfig();
                 static {
                         intakeConfig
-                                .idleMode(IdleMode.kCoast);
+                                        .idleMode(IdleMode.kCoast);
                         intakeExtendConfig
-                                .idleMode(IdleMode.kBrake)
-                                .smartCurrentLimit(30)
-                                .closedLoopRampRate(4);
+                                        .idleMode(IdleMode.kBrake)
+                                        .smartCurrentLimit(30);
 
                         intakeExtendConfig.closedLoop
-                                .positionWrappingMaxInput(360)
-                                .positionWrappingMinInput(-360)
-                                .outputRange(-1, 1)
-                                .feedbackSensor(FeedbackSensor.kAbsoluteEncoder)
-                                .pid(0.006, 0, 0);
+                                        .positionWrappingEnabled(false)
+                                        .feedbackSensor(FeedbackSensor.kAbsoluteEncoder)
+                                        .pid(0.006, 0, 0);
 
                         intakeExtendConfig.encoder
-                                .positionConversionFactor(360);
-                                
-
-
-                                
-
-
-                                
-
+                                        .positionConversionFactor(360);
 
                 }
         }
@@ -65,21 +54,21 @@ public final class Configs {
                 public static final SparkFlexConfig shooterConfig = new SparkFlexConfig();
                 public static final SparkFlexConfig shooterTwoConfig = new SparkFlexConfig();
                 public static final SparkMaxConfig hoodConfig = new SparkMaxConfig();
-                public static final SparkFlexConfig azimuthConfig = new SparkFlexConfig();
+                public static final SparkMaxConfig azimuthConfig = new SparkMaxConfig();
 
                 static {
                         shooterConfig
                                         .idleMode(IdleMode.kCoast);
-                        
+
                         shooterConfig.closedLoop
-                                .pid(0.0,0.0,0.0);
+                                        .pid(0.0, 0.0, 0.0);
                         shooterConfig.closedLoop.feedForward
-                                .svag(0.0,0.0,0.0,0.0);        
-                                
+                                        .svag(0.0, 0.0, 0.0, 0.0);
+
                         shooterTwoConfig
                                         .follow(17)
                                         .inverted(true);
-                                        
+
                         hoodConfig
                                         .idleMode(IdleMode.kBrake);
                         azimuthConfig
@@ -87,7 +76,10 @@ public final class Configs {
 
                         azimuthConfig.encoder
                                         .positionConversionFactor(
-                                                        (1.0 / TurretConstants.kTurretAngleConversionFactor) * 360.0);
+                                                        360.0);
+                        azimuthConfig.closedLoop
+                                        .feedbackSensor(FeedbackSensor.kAbsoluteEncoder)
+                                        .pid(0.01, 0.0, 0.0);
 
                 }
 

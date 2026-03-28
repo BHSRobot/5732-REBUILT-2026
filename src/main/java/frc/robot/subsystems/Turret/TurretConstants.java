@@ -16,7 +16,7 @@ public class TurretConstants {
     // == Turret Motion Constraints ==
     public static final double kTurretMaxAcceleration = 0;
     public static final double kTurretMaxVelocity = 0;
-    public static final double kTurretAngleConversionFactor = 0.0;
+    public static final double kTurretAngleConversionFactor = 45;
 
     // == Turret RPMS and Angles ==
 

@@ -336,6 +336,17 @@ public class SwerveSubsystem extends SubsystemBase {
       Constants.Vision.CHASSIS_CAMERA_PITCH, 
       Constants.Vision.CHASSIS_CAMERA_YAW
     );
+    LimelightHelpers.setCameraPose_RobotSpace(
+      Vision.kturretlime, 
+      Constants.Vision.CHASSISTWO_CENTER_FORWARD_OFFSET, 
+      Constants.Vision.CHASSISTWO_CENTER_SIDE_OFFSET, 
+      Constants.Vision.STATIC_Z_HEIGHT, 
+      Constants.Vision.STATIC_CAMERA_ROLL, 
+      Constants.Vision.STATIC_CAMERA_PITCH, 
+      Constants.Vision.STATIC_CAMERA_YAW
+    );
+    
+
   }
 
   @Override
@@ -412,17 +423,7 @@ public class SwerveSubsystem extends SubsystemBase {
     
   }
 
-  /**
-   * Get the path follower with events.
-   *
-   * @param pathName PathPlanner path name.
-   * @return {@link AutoBuilder#followPath(PathPlannerPath)} path command.
-   */
-  public Command getAutonomousCommand(String pathName) {
-    // Create a path following command using AutoBuilder. This will also trigger
-    // event markers.
-    return new PathPlannerAuto(pathName);
-  }
+  
 
   
   
@@ -729,14 +730,14 @@ public class SwerveSubsystem extends SubsystemBase {
     Translation2d cameraRelativeToTurret = new Translation2d(Constants.Vision.CAMERA_RADIUS_FROM_TURRET, 0.0);
     Translation2d rotatedCameraOffset = cameraRelativeToTurret.rotateBy(turretAngle);
     
-    double finalCameraForward = Constants.Vision.TURRET_CENTER_X_OFFSET + rotatedCameraOffset.getX();
-    double finalCameraSide = Constants.Vision.TURRET_CENTER_Y_OFFSET + rotatedCameraOffset.getY();
+    double finalCameraForward = Constants.Vision.TURRET_CENTER_FORWARD_OFFSET + rotatedCameraOffset.getX();
+    double finalCameraSide = Constants.Vision.TURRET_CENTER_SIDE_OFFSET + rotatedCameraOffset.getY();
     double finalCameraYaw = turretAngle.getDegrees();
 
     LimelightHelpers.setCameraPose_RobotSpace(
       Vision.kturretlime, 
-      finalCameraForward, finalCameraSide, Constants.Vision.CAMERA_Z_HEIGHT, 
-      Constants.Vision.CAMERA_ROLL, Constants.Vision.CAMERA_PITCH, finalCameraYaw
+      finalCameraForward, finalCameraSide, Constants.Vision.STATIC_Z_HEIGHT, 
+      Constants.Vision.STATIC_CAMERA_ROLL, Constants.Vision.STATIC_CAMERA_PITCH, finalCameraYaw
     );
 }
 
@@ -745,9 +746,9 @@ public class SwerveSubsystem extends SubsystemBase {
    */
   private void processLimelight(String cameraName, double yaw, double velocity) {
     
-    if (cameraName.equals(Vision.kturretlime)) {
-        updateTurretCameraExtrinsics(m_turretAngleSupplier.get());
-    }
+    // if (cameraName.equals(Vision.kturretlime)) {
+    //     updateTurretCameraExtrinsics(m_turretAngleSupplier.get());
+    // }
 
     
     LimelightHelpers.SetRobotOrientation(cameraName, yaw, velocity, 0.0, 0.0, 0.0, 0.0);

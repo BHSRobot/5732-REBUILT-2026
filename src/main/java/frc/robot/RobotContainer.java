@@ -13,6 +13,7 @@ import org.w3c.dom.html.HTMLHeadingElement;
 
 import com.pathplanner.lib.auto.AutoBuilder;
 import com.pathplanner.lib.auto.NamedCommands;
+import com.pathplanner.lib.commands.PathPlannerAuto;
 import com.pathplanner.lib.path.PathPlannerPath;
 import com.pathplanner.lib.events.EventTrigger;
 
@@ -77,7 +78,7 @@ public class RobotContainer {
   private final Indexer m_indexer;
   private final TurretShooter m_shooter;
 
-  // private final SysIDRoutines m_routines;
+ //private final SysIDRoutines m_routines;
 
   // Controllers
   public static final CommandXboxController m_driverController = new CommandXboxController(
@@ -94,28 +95,23 @@ public class RobotContainer {
   private Autos auto;
 
   public RobotContainer() {
-    if (RobotBase.isSimulation()) {
-      SimulatedArena.overrideInstance(new Arena2026Rebuilt());
-    }
-
     m_driveBase = new SwerveSubsystem(new File(Filesystem.getDeployDirectory(), "swerve/"));
 
-    // m_routines = new SysIDRoutines(m_driveBase);
     autoChooser = new LoggedDashboardChooser<>("AutoChooser", AutoBuilder.buildAutoChooser());
 
     if (RobotBase.isSimulation()) {
-
+      SimulatedArena.overrideInstance(new Arena2026Rebuilt());
       m_intake = new Intake(new IntakeIOSim(m_driveBase.getSimDrive()));
     } else {
-      m_intake = null;
+      m_intake = new Intake(new IntakeIOReal());
     }
     // change when robot is built
-    m_turretAzimuth = new TurretAzimuth();
-    m_driveBase.setTurretAngleSupplier(() ->
-    Rotation2d.fromDegrees(m_turretAzimuth.getCurrentAngle()));
+    m_turretAzimuth = null;
+   // m_driveBase.setTurretAngleSupplier(() -> Rotation2d.fromDegrees(m_turretAzimuth.getCurrentAngle()));
     m_indexer = new Indexer();
     // change when robot is built
     m_shooter = null;
+    //m_routines = new SysIDRoutines(m_driveBase);
 
     auto = new Autos();
 
@@ -139,9 +135,12 @@ public class RobotContainer {
     configureNamedCommands();
     SmartDashboard.putBoolean("TuningModeActive", false);
 
-    // m_turretAzimuth.setDefaultCommand(
-    // new TurretVisionAim(m_driveBase, m_turretAzimuth, m_shooter)
-    // );
+   // m_turretAzimuth.setDefaultCommand(
+   //     new TurretVisionAim(m_driveBase, m_turretAzimuth, m_shooter, m_indexer));
+    autoChooser.addOption("RushLeft", getAutonomousCommand());
+    autoChooser.addDefaultOption("CornerAndShoot", getAutonomousCommand());
+    autoChooser.addOption("TestPath", getAutonomousCommand());
+
   }
 
   private void configureBindings() {
@@ -159,27 +158,29 @@ public class RobotContainer {
         new InstantCommand(() -> m_driveBase.zeroGyro(), m_driveBase).withName("Yaw zeroed"));
 
     // m_driverController.x().whileTrue(
-    //     new RunCommand(() -> m_driveBase.defensiveXCommand(), m_driveBase).withName("Defense Position"));
+    // new RunCommand(() -> m_driveBase.defensiveXCommand(),
+    // m_driveBase).withName("Defense Position"));
 
-    // m_driverController.rightTrigger().whileTrue(
-    // m_intake.intakeCommand()
-    // );
-    // m_driverController.leftTrigger().whileTrue(
-    // m_intake.ejectCommand()
-    // );
+    m_driverController.leftTrigger().whileTrue(
+    m_intake.intakeCommand()
+    );
+    m_driverController.leftBumper().whileTrue(
+    m_intake.ejectCommand()
+    );
 
-    // m_driverController.rightBumper().whileTrue(
-    //     m_indexer.runIndexer());
-    // m_driverController.rightTrigger().whileTrue(
-    //     m_indexer.runIndexerReverse());
+    m_driverController.rightTrigger().whileTrue(
+      m_indexer.runIndexer());
+    m_driverController.rightBumper().whileTrue(
+      m_indexer.runIndexerReverse());
     // m_driverController.leftBumper().whileTrue(
-    //     m_intake.intakeCommand());
+    // m_intake.intakeCommand());
     // m_driverController.leftTrigger().whileTrue(
-    //     new RunCommand(
-    //         () -> {
-    //           m_shooter.justShootBruh(); // Rev the motors
-    //         },
-    //         m_shooter).finallyDo((interrupted) -> m_shooter.stop()) // Runs automatically when trigger is released
+    // new RunCommand(
+    // () -> {
+    // m_shooter.justShootBruh(); // Rev the motors
+    // },
+    // m_shooter).finallyDo((interrupted) -> m_shooter.stop()) // Runs automatically
+    // when trigger is released
     // );
 
     // m_driverController.rightTrigger().whileTrue(
@@ -187,19 +188,15 @@ public class RobotContainer {
     // getAllianceBasedTranslation().getX(),
     // () -> getAllianceBasedTranslation().getY()));
 
-    // m_driverController.y().whileTrue(
-    // m_intake.testExtend());
-    // m_driverController.b().whileTrue(
-    // m_intake.testRetract());
-
-    
+    m_driverController.y().whileTrue(
+    m_intake.testExtend());
+    m_driverController.b().whileTrue(
+    m_intake.testRetract());
 
     // ==== OPERATOR BINDS ====
-    // HOLD A to aim the limelight at your target
     //
     //
-    // m_opController.a().whileTrue(
-    // new VisionAim(m_driveBase, m_driverController));
+    //
 
     // m_driverController.rightTrigger().whileTrue(
     // new RunCommand(() -> m_shooter.setAiming()));
@@ -218,6 +215,15 @@ public class RobotContainer {
     // m_opController.x().whileTrue(
     // m_routines.sysIdAngleDynam(Direction.kReverse)
     // );
+
+    // m_opController.y().whileTrue(
+    // m_routines.sysIdHeadingQuasi(Direction.kForward));
+    // m_opController.a().whileTrue(
+    // m_routines.sysIdHeadingQuasi(Direction.kReverse));
+    // m_opController.b().whileTrue(
+    // m_routines.sysIdHeadingDynam(Direction.kForward));
+    // m_opController.x().whileTrue(
+    // m_routines.sysIdHeadingDynam(Direction.kReverse));
 
     // m_opController.povDown().whileTrue(
     // SysIDRoutines.sysIdDriveQuasi(Direction.kReverse)
@@ -240,13 +246,14 @@ public class RobotContainer {
 
   public void configureNamedCommands() {
 
-    // NamedCommands.registerCommand("aimChassisAndShoot", new
-    // ChassisVisionAim(m_driveBase, m_shooter, m_indexer,
-    // () -> getAllianceBasedTranslation().getX(), () ->
-    // getAllianceBasedTranslation().getY()));
+   /// NamedCommands.registerCommand("aimChassisAndShoot", new ChassisVisionAim(m_driveBase, m_shooter, m_indexer,
+      //  () -> getAllianceBasedTranslation().getX(), () -> getAllianceBasedTranslation().getY()));
+
+    // NamedCommands.registerCommand("aimTurretAndShoot",
+    // new TurretVisionAim(m_driveBase, m_turretAzimuth, m_shooter, m_indexer));
 
     // NamedCommands.registerCommand("RunIndexer", m_indexer.runIndexer());
-    // NamedCommands.registerCommand("RunIntake", m_intake.intakeCommand());
+    NamedCommands.registerCommand("Intake", m_intake.intakeCommand());
 
   }
 
@@ -279,13 +286,15 @@ public class RobotContainer {
     // return AutoBuilder.followPath(path);
     // } catch (Exception e) {
     // DriverStation.reportError("Big oops: " + e.getMessage(), e.getStackTrace());
-    return Commands.none();
+
+    return new PathPlannerAuto(autoChooser.getSendableChooser().getSelected());
 
   }
   // return Commands.print("No autonomous command configured");
 
   public void setupDriverTab() {
-
+    CameraServer.addServer("http://limelight-chassis.local:5800");
+    CameraServer.addServer("http://limelight-turret.local:5800");
     CameraServer.startAutomaticCapture();
   }
 

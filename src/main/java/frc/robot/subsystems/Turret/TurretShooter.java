@@ -55,15 +55,15 @@ public class TurretShooter extends SubsystemBase {
     private boolean isTuning;
     private boolean sysidActive = false;
 
-    public static final LoggedTunableNumber PTurretHood = new LoggedTunableNumber("Tuning/TurretHood/kP");
-    public static final LoggedTunableNumber DTurretHood = new LoggedTunableNumber("Tuning/TurretHood/kD");
+    public static final LoggedTunableNumber PTurretHood = new LoggedTunableNumber("TurretHood/kP");
+    public static final LoggedTunableNumber DTurretHood = new LoggedTunableNumber("TurretHood/kD");
 
     private final InterpolatingDoubleTreeMap rpmTable = new InterpolatingDoubleTreeMap();
     private final InterpolatingDoubleTreeMap hoodTable = new InterpolatingDoubleTreeMap();
     private final InterpolatingDoubleTreeMap tofTable = new InterpolatingDoubleTreeMap();
 
-    private static final LoggedTunableNumber tuningRpm = new LoggedTunableNumber("Tuning/Shooter/TargetRPM", 2000.0);
-    private static final LoggedTunableNumber tuningHood = new LoggedTunableNumber("Tuning/Shooter/TargetHood", 20.0);
+    private static final LoggedTunableNumber tuningRpm = new LoggedTunableNumber("Shooter/TargetRPM", 2000.0);
+    private static final LoggedTunableNumber tuningHood = new LoggedTunableNumber("Shooter/TargetHood", 20.0);
 
     public TurretShooter() {
         PTurretHood.initDefault(TurretConstants.kPTurretHood);

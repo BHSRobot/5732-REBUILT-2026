@@ -44,7 +44,8 @@ import edu.wpi.first.wpilibj2.command.Subsystem;
 public class SysIDRoutines {
   private SwerveDrive m_swerveDrive;
   private SwerveSubsystem m_swerveSubsystem;
-  private TurretShooter m_shooter;
+  private SwerveModule[] modules;
+  
   
   private SysIdRoutine.Config angleConfig;
   public final SysIdRoutine angleSysIdRoutine;
@@ -55,15 +56,14 @@ public class SysIDRoutines {
 
   private double currentHeadingVolts = 0.0;
 
-  
-  // modules in an array 
-  SwerveModule[] modules = m_swerveDrive.getModules();
-
-  public SysIDRoutines(SwerveSubsystem drivetrain, TurretShooter shooter) {
+  public SysIDRoutines(SwerveSubsystem drivetrain) {
     m_swerveSubsystem = drivetrain;
     m_swerveDrive = m_swerveSubsystem.getSwerveDrive();
-    m_shooter = shooter;
+    // change this
     
+    
+  // modules in an array 
+  modules = m_swerveDrive.getModules();
     /**
      * Swerve Angular motor SysId Routine
      */

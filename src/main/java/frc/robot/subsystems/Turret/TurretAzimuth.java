@@ -11,7 +11,9 @@ import com.revrobotics.PersistMode;
 import com.revrobotics.RelativeEncoder;
 import com.revrobotics.ResetMode;
 import com.revrobotics.spark.SparkLowLevel.MotorType;
+import com.revrobotics.spark.SparkMax;
 import com.revrobotics.spark.config.SparkFlexConfig;
+import com.revrobotics.spark.config.SparkMaxConfig;
 import com.revrobotics.spark.SparkClosedLoopController;
 import frc.robot.utils.Configs;
 import frc.robot.utils.Constants;
@@ -20,7 +22,7 @@ import frc.robot.utils.LoggedTunableNumber;
 
 public class TurretAzimuth extends SubsystemBase {
 
-    private final SparkFlex m_mainVortex;
+    private final SparkMax m_mainVortex;
     private final SparkClosedLoopController m_turretClosedLoop;
     private final AbsoluteEncoder m_turretAzimuthEncoder;
     private double m_currentAngle;
@@ -28,7 +30,7 @@ public class TurretAzimuth extends SubsystemBase {
     public static final LoggedTunableNumber PTurretAngle = new LoggedTunableNumber("TurretAzimuth/kP");
     public static final LoggedTunableNumber DTurretAngle = new LoggedTunableNumber("TurretAzimuth/kD");
     public TurretAzimuth() {
-        m_mainVortex = new SparkFlex(MechConstants.kTurrAzimuthID, MotorType.kBrushless);
+        m_mainVortex = new SparkMax(MechConstants.kTurrAzimuthID, MotorType.kBrushless);
         m_mainVortex.configure(Configs.TurretConfigs.azimuthConfig, ResetMode.kNoResetSafeParameters, PersistMode.kPersistParameters);
         m_turretAzimuthEncoder = m_mainVortex.getAbsoluteEncoder();
         m_turretClosedLoop = m_mainVortex.getClosedLoopController();
@@ -45,7 +47,7 @@ public class TurretAzimuth extends SubsystemBase {
        
         if (SmartDashboard.getBoolean("TuningModeActive", false)) {
             if (PTurretAngle.hasChanged(hashCode()) || DTurretAngle.hasChanged(hashCode()))  {
-                SparkFlexConfig updateConfig = new SparkFlexConfig();
+                SparkMaxConfig updateConfig = new SparkMaxConfig();
                 updateConfig.closedLoop.pid(PTurretAngle.get(), 0.0, DTurretAngle.get());
                 m_mainVortex.configure(updateConfig, ResetMode.kNoResetSafeParameters, PersistMode.kNoPersistParameters);
             }
@@ -64,13 +66,13 @@ public class TurretAzimuth extends SubsystemBase {
 
 
     public boolean isAtTargetAngle() {
-        return Math.abs(m_targetAngle - m_currentAngle) <= 1.0;
+        return m_turretClosedLoop.isAtSetpoint();
     }
 
 
     public void stop() {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'stop'");
+        m_mainVortex.stopMotor();
+        
     }
 
     

@@ -15,9 +15,11 @@ import frc.robot.utils.Constants;
 
 public class IntakeIOReal implements IntakeIO {
     private final SparkMax intakeMotor;
+    private final SparkMax intakeSubMotor;
     private final SparkMax intakeExtensionMotor;
-
+    private final SparkMax intakeExtensionSubMotor;
     private final SparkClosedLoopController intakeMotorClosedLoop;
+    
     private final SparkClosedLoopController intakeExtendClosedLoop;
 
     private final RelativeEncoder mainIntakeEncoder;
@@ -25,7 +27,10 @@ public class IntakeIOReal implements IntakeIO {
 
     public IntakeIOReal() {
         intakeMotor = new SparkMax(Constants.MechConstants.kIntakeID, MotorType.kBrushless);
+        intakeSubMotor = new SparkMax(Constants.MechConstants.kIntakeSubID, MotorType.kBrushless);
         intakeExtensionMotor = new SparkMax(Constants.MechConstants.kIntakeExtendID, MotorType.kBrushless);
+        intakeExtensionSubMotor = new SparkMax(Constants.MechConstants.kIntakeSubExtendID, MotorType.kBrushless);
+        
 
         mainIntakeEncoder = intakeMotor.getEncoder();
         extendIntakeEncoder = intakeExtensionMotor.getEncoder();
@@ -36,7 +41,7 @@ public class IntakeIOReal implements IntakeIO {
 
     @Override
     public void updateInputs(IntakeIOInputs inputs) {
-        inputs.mainAppliedVolts = intakeMotor.getAppliedOutput() * intakeMotor.getBusVoltage();
+        inputs.mainAppliedVolts = (intakeMotor.getAppliedOutput() * intakeMotor.getBusVoltage());
         inputs.mainCurrentAmps = intakeMotor.getOutputCurrent();
         inputs.mainVelocityRadPerSec = mainIntakeEncoder.getVelocity(); 
         
@@ -50,9 +55,11 @@ public class IntakeIOReal implements IntakeIO {
         intakeMotorClosedLoop.setSetpoint(rpm, ControlType.kMAXMotionVelocityControl);
 
     }
+
     @Override
     public void setIntakeVoltage(double volts) {
-        intakeMotor.setVoltage(volts);
+        intakeMotor.setVoltage(-volts);
+        intakeSubMotor.setVoltage(volts);
         
     }
 
@@ -76,26 +83,29 @@ public class IntakeIOReal implements IntakeIO {
 
     @Override
     public void testExtend() {
-        intakeExtensionMotor.set(.15);
+        intakeExtensionMotor.set(.75);
+        intakeExtensionSubMotor.set(.75);
     }
 
     @Override
     public void testRetract() {
-        intakeExtensionMotor.set(-.15);
+        intakeExtensionSubMotor.set(-.75);
+        intakeExtensionMotor.set(-.75);
     }
     @Override
     public void testSetDisabled() {
         intakeExtensionMotor.setVoltage(0);
+        intakeExtensionSubMotor.setVoltage(0);
     }
     @Override
     public void updateExtensionPID(double kP, double kD) {
         // Create a config object to apply the new PID values
         SparkMaxConfig config = new SparkMaxConfig();
         
-        // Apply the new P and D values. (Assuming you are using the integrated encoder)
+        // Apply the new P and D values
         config.closedLoop.pid(kP, 0.0, kD);
         
-        // Apply the config to the motor. 
+        // Apply the config to the motor
         // Using kNoPersistParameters because we don't want to burn to flash every periodic loop
         intakeExtensionMotor.configure(config, ResetMode.kNoResetSafeParameters, PersistMode.kNoPersistParameters);
     }

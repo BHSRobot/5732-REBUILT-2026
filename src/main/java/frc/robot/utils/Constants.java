@@ -41,8 +41,8 @@ public final class Constants {
     public static final int kTurrHoodID = 16;
     public static final int kTurrShootID = 17;
     public static final int kHoppLenID = 18;
-    public static final int kIndexerID = 19;
-    public static final int kIndexRollerID = 20;
+    public static final int kIndexerID = 40;
+    public static final int kIndexRollerID = 19;
     public static final int kIntakeID = 21;
     public static final int kIntakeExtendID = 22;
     public static final int kTurrShootFollowID = 23;
@@ -50,6 +50,10 @@ public final class Constants {
     //==Offsets==
     public static final double kTurretAngleOffest = 0;
     public static final double kHopperOffset = 0;
+
+    public static int kIntakeSubID = 24;
+
+    public static int kIntakeSubExtendID = 25;
 
     
     
@@ -82,24 +86,40 @@ public final class Constants {
     // -- limelight constants for the turret --
 
     // turret location relative to the center of robot
-    public static final double TURRET_CENTER_X_OFFSET = 0.0; // forward of robot center
-    public static final double TURRET_CENTER_Y_OFFSET = 0.0; // left/right of robot center
+    public static final double TURRET_CENTER_FORWARD_OFFSET = 0.0; // forward of robot center
+    public static final double TURRET_CENTER_SIDE_OFFSET = 0.0; // left/right of robot center
 
     //camera location relative to the center of the turret
     public static final double CAMERA_RADIUS_FROM_TURRET = 0.20; // distance from center of turret
-    public static final double CAMERA_Z_HEIGHT = 0.55; // Height of camera lens from the floor
+    public static final double TURRET_CAMERA_Z_HEIGHT = 0.55; // Height of camera lens from the floor
     
-    public static final double CAMERA_PITCH = 20.0; // Static angle the camera tilts up/down
-    public static final double CAMERA_ROLL = 0.0;
+    public static final double TURRET_CAMERA_PITCH = 20.0; // Static angle the camera tilts up/down
+    public static final double TURRET_CAMERA_ROLL = 0.0;
+    public static final double TURRET_CAMERA_YAW = -90; // angle camera is facing relative to front
+    
+
+    // second chassis camera location 
+    
+    // relative to the center of robot
+    public static final double CHASSISTWO_CENTER_FORWARD_OFFSET = -0.222; // forward of robot center
+    public static final double CHASSISTWO_CENTER_SIDE_OFFSET = -0.325; // left/right of robot center
+
+    // relative to the center of the robot
+    public static final double STATIC_Z_HEIGHT = 0.242; // Height of camera lens from the floor
+    
+    public static final double STATIC_CAMERA_ROLL = 0.0; // Static angle the camera tilts up/down
+    public static final double STATIC_CAMERA_PITCH = 50.0;
+    public static final double STATIC_CAMERA_YAW = 125; // angle camera is facing relative to front
 
     // chassis camera location relative to robots center
 
-    public static final double CHASSIS_CAMERA_FORWARD_OFFSET = 0; // distance from center of robot
-    public static final double CHASSIS_CAMERA_SIDE_OFFSET = 0.3683; // distance from center of robot 
-    public static final double CHASSIS_CAMERA_Z_HEIGHT = 0.56; // Height of camera lens from the floor
-    public static final double CHASSIS_CAMERA_YAW = -90; // angle camera is facing relative to front
-    public static final double CHASSIS_CAMERA_PITCH = 52.0; // Static angle the camera tilts up/down
-    public static final double CHASSIS_CAMERA_ROLL = 0.0; 
+    public static final double CHASSIS_CAMERA_FORWARD_OFFSET = -0.222; // distance from center of robot
+    public static final double CHASSIS_CAMERA_SIDE_OFFSET = -0.325; // distance from center of robot 
+    public static final double CHASSIS_CAMERA_Z_HEIGHT = 0.242; // Height of camera lens from the floor
+    public static final double CHASSIS_CAMERA_ROLL = 0; // angle camera is facing relative to front
+    public static final double CHASSIS_CAMERA_PITCH = 50.0; // Static angle the camera tilts up/down
+    public static final double CHASSIS_CAMERA_YAW = -125;
+    
   }
 
   public static final class AutoConstants {

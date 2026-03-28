@@ -26,12 +26,12 @@ public class TurretVisionAim extends Command {
         targetLocation = new Translation2d(0, 0);
         driveSubsystem = drive;
         m_turretAngle = turret;
-        m_turretShooter = turretshoot;
-        m_indexer = indexer; 
+        m_turretShooter = null;
+        m_indexer = null; 
 
         
-        addRequirements(m_turretAngle, m_turretShooter, m_indexer); 
-        withName("aimturretandshoot");
+        addRequirements(m_turretAngle); 
+        setName("aimturretandshoot");
     }
 
     @Override
@@ -45,7 +45,7 @@ public class TurretVisionAim extends Command {
             }
         }
 
-        double latencySeconds = 0.15; // mechanical delay
+        double latencySeconds = 0.0; // mechanical delay
         Pose2d currentPose = driveSubsystem.getPose();
         var speeds = driveSubsystem.getRobotVelocity(); 
 
@@ -69,12 +69,12 @@ public class TurretVisionAim extends Command {
         double timeOfFlight = 0.0;
         Translation2d virtualTarget = actualTargetLocation;
 
-        for (int i = 0; i < 4; i++) {
-            timeOfFlight = m_turretShooter.getEstimatedTimeOfFlight(virtualDistance);
-            Translation2d offset = fieldRelativeVelocity.times(timeOfFlight);
-            virtualTarget = actualTargetLocation.minus(offset);
-            virtualDistance = robotLocation.getDistance(virtualTarget);
-        }
+        // for (int i = 0; i < 4; i++) {
+        //     timeOfFlight = m_turretShooter.getEstimatedTimeOfFlight(virtualDistance);
+        //     Translation2d offset = fieldRelativeVelocity.times(timeOfFlight);
+        //     virtualTarget = actualTargetLocation.minus(offset);
+        //     virtualDistance = robotLocation.getDistance(virtualTarget);
+        // }
 
         double dx = virtualTarget.getX() - robotLocation.getX();
         double dy = virtualTarget.getY() - robotLocation.getY();
@@ -86,35 +86,42 @@ public class TurretVisionAim extends Command {
         Rotation2d virtualTurretSetpoint = fieldRelativeAngleToTarget.minus(predictedPose.getRotation());
 
         // feed final converged distance to shooter and angle to turret
-        m_turretShooter.prepareToShoot(virtualDistance);
+
+        // lot of changes need to be made to make this usable again
+        //m_turretShooter.prepareToShoot(virtualDistance);
         m_turretAngle.setTargetAngle(virtualTurretSetpoint.getDegrees());
 
         
-        boolean isShooterReady = m_turretShooter.isAtTargetRPM(); 
+        //boolean isShooterReady = m_turretShooter.isAtTargetRPM(); 
+        boolean isShooterReady = true;
         boolean isTurretReady = m_turretAngle.isAtTargetAngle();
 
-        if (isShooterReady && isTurretReady) {
+        // if (isShooterReady && isTurretReady) {
             
-            m_indexer.setIndexerState(IndexerState.RUNNING);
-        } else {
-            // keep warming up the rollers but don't feed the ball into the flywheel yet
-            m_indexer.setIndexerState(IndexerState.WARMUP);
-        }
+        //     m_indexer.setIndexerState(IndexerState.RUNNING);
+        // } else {
+        //     // keep warming up the rollers but don't feed the ball into the flywheel yet
+        //     m_indexer.setIndexerState(IndexerState.WARMUP);
+        // }
     }
 
     
     @Override
     public void end(boolean interrupted) {
         // when you let go of the button stop everything.
-        m_indexer.setIndexerState(IndexerState.DISABLED);
+        //m_indexer.setIndexerState(IndexerState.DISABLED);
         
         
-        m_turretShooter.stop(); 
+        //m_turretShooter.stop(); 
         
     }
 
     @Override
     public boolean isFinished() {
         return false; 
+    }
+
+    public Command getCommand() {
+        return new TurretVisionAim(driveSubsystem, m_turretAngle, m_turretShooter, m_indexer);
     }
 }
