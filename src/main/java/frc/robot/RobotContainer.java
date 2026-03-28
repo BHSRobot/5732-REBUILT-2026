@@ -110,7 +110,7 @@ public class RobotContainer {
    // m_driveBase.setTurretAngleSupplier(() -> Rotation2d.fromDegrees(m_turretAzimuth.getCurrentAngle()));
     m_indexer = new Indexer();
     // change when robot is built
-    m_shooter = null;
+    m_shooter = new TurretShooter();
     //m_routines = new SysIDRoutines(m_driveBase);
 
     auto = new Autos();
@@ -146,9 +146,14 @@ public class RobotContainer {
   private void configureBindings() {
 
     // ==== DRIVER BINDS ====
-    // PRESS POV UP to toggle between field and robot relative
-    // PRESS A to zero the gyro to your current heading
-    // HOLD X to lock robot in defensive stance
+    
+    // a is heading reset
+    // left triger is intake
+    // left bumper is intake reverse
+    // right trigger is index/shoot
+    // right bumper is index reverse
+    // y is intake extend
+    // b is intake retract 
 
     // creates a trigger for quick field/robot relative control switching
     new Trigger(m_driverController.povUp()).onTrue(
@@ -168,8 +173,25 @@ public class RobotContainer {
     m_intake.ejectCommand()
     );
 
+
     m_driverController.rightTrigger().whileTrue(
-      m_indexer.runIndexer());
+        Commands.parallel(
+            // Branch 1: Start the shooter and keep it running for the duration of the button press
+            new RunCommand(() -> m_shooter.justShootBruh(), m_shooter)
+                .finallyDo(() -> m_shooter.stop()),
+                
+            // Branch 2: Wait 0.5 seconds, then start the indexer
+            Commands.sequence(
+                new WaitCommand(0.5),
+                m_indexer.runIndexer()
+            )
+        )
+    );
+
+
+
+    //m_driverController.rightTrigger().whileTrue(
+    //  m_indexer.runIndexer());
     m_driverController.rightBumper().whileTrue(
       m_indexer.runIndexerReverse());
     // m_driverController.leftBumper().whileTrue(
